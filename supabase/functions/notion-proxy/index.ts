@@ -545,29 +545,74 @@ async function handleSync(apiKey: string, databaseId: string, playerId: string) 
   const rows = await fetchAllRows(apiKey, databaseId);
   const mapped = rows.map((r) => mapRow(r, playerId)).filter(Boolean) as NonNullable<ReturnType<typeof mapRow>>[];
 
+  const debug: Record<string, unknown> = {
+    notion_rows_fetched: rows.length,
+    rows_with_valid_tipo: mapped.length,
+    rows_skipped_no_tipo: rows.length - mapped.length,
+    player_id_used: playerId,
+    first_payload_row: mapped[0] ?? null,
+  };
+
   if (mapped.length === 0) {
-    return { ok: true, synced: 0, skipped: rows.length, message: "No rows with a valid Tipo (Investidor/Proprietário) found" };
+    return {
+      ok: true, synced: 0, skipped: rows.length,
+      message: "No rows with a valid Tipo (Investidor/Proprietário) found",
+      debug,
+    };
   }
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-  const { error, count } = await supabase
+  // ── Step 1: verify the player exists (FK check before batch insert) ──────────
+  const { data: player, error: playerError } = await supabase
+    .from("players")
+    .select("id")
+    .eq("id", playerId)
+    .maybeSingle();
+
+  debug.player_exists = !!player;
+  debug.player_lookup_error = playerError ? playerError.message : null;
+
+  if (playerError || !player) {
+    return {
+      ok: false,
+      error: `player_id "${playerId}" not found in players table — every insert would violate the FK constraint. Ensure the player is created before syncing leads.`,
+      debug,
+    };
+  }
+
+  // ── Step 2: upsert ────────────────────────────────────────────────────────────
+  const { error: upsertError, count: upsertCount } = await supabase
     .from("leads")
     .upsert(mapped, { onConflict: "notion_page_id", ignoreDuplicates: false, count: "exact" });
 
-  if (error) {
-    if (error.message.includes("notion_page_id")) {
-      const stripped = mapped.map(({ notion_page_id: _id, ...rest }) => rest);
-      const { error: e2, count: c2 } = await supabase
-        .from("leads")
-        .upsert(stripped, { onConflict: "player_id,name,tipo", ignoreDuplicates: false, count: "exact" });
-      if (e2) throw e2;
-      return { ok: true, synced: c2 ?? mapped.length, skipped: rows.length - mapped.length, message: "Leads synced successfully" };
-    }
-    throw error;
+  debug.upsert_reported_count = upsertCount;
+  debug.upsert_error = upsertError ? upsertError.message : null;
+  debug.upsert_error_code = upsertError ? upsertError.code : null;
+  debug.upsert_error_details = upsertError ? upsertError.details : null;
+
+  if (upsertError) {
+    return { ok: false, error: upsertError.message, debug };
   }
 
-  return { ok: true, synced: count ?? mapped.length, skipped: rows.length - mapped.length, message: "Leads synced successfully" };
+  // ── Step 3: verify with a real SELECT count (upsert count is unreliable) ────
+  const { count: actualCount, error: countError } = await supabase
+    .from("leads")
+    .select("*", { count: "exact", head: true })
+    .eq("player_id", playerId);
+
+  debug.actual_leads_in_db_after_upsert = actualCount;
+  debug.count_verify_error = countError ? countError.message : null;
+
+  const synced = actualCount ?? upsertCount ?? mapped.length;
+
+  return {
+    ok: true,
+    synced,
+    skipped: rows.length - mapped.length,
+    message: `Leads synced successfully — ${synced} leads now in database for this player`,
+    debug,
+  };
 }
 
 async function handleDiagnose(apiKey: string, databaseId: string, playerId: string) {
