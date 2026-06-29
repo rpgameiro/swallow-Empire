@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Plus, Search, X, Star, Building2, DollarSign, MapPin,
-  Globe, Edit2, Trash2, Phone, Mail, Calendar, ChevronDown,
-  Check, Users,
-} from 'lucide-react';
+import { Plus, Search, X, Star, Building2, DollarSign, MapPin, Globe, CreditCard as Edit2, Trash2, Phone, Mail, Calendar, ChevronDown, Check, Users } from 'lucide-react';
 import {
   Lead, LeadTipo, LeadStatus, LeadUrgency, LeadSource,
   LOCATION_OPTIONS, ASSET_TYPE_OPTIONS,
