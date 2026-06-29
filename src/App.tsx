@@ -20,6 +20,7 @@ import { DealCinematicSequence } from './components/DealCinematicSequence';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { XPAnalyticsDashboard } from './components/XPAnalyticsDashboard';
 import { LeadsMatchingPanel } from './components/LeadsMatchingPanel';
+import { LeadsCRMPanel } from './components/LeadsCRMPanel';
 import { DistrictHeatmap } from './components/DistrictHeatmap';
 import { MatchAnalyticsDashboard } from './components/MatchAnalyticsDashboard';
 import { NotionSettingsPanel } from './components/NotionSettingsPanel';
@@ -892,7 +893,7 @@ function LeadsView({
   leads: Lead[];
   onLeadsSync: (leads: Lead[]) => void;
 }) {
-  const [leadsTab, setLeadsTab] = useState<'matching' | 'heatmap' | 'analytics' | 'settings'>('matching');
+  const [leadsTab, setLeadsTab] = useState<'matching' | 'heatmap' | 'analytics' | 'settings' | 'crm'>('matching');
 
   return (
     <div className="space-y-4">
@@ -900,6 +901,7 @@ function LeadsView({
       <div className="flex gap-1 bg-slate-900/50 border border-slate-800/50 rounded-xl p-1 w-fit">
         {([
           { key: 'matching',  label: 'Matching Engine' },
+          { key: 'crm',       label: 'CRM' },
           { key: 'heatmap',   label: 'District Heatmap' },
           { key: 'analytics', label: 'Match Analytics' },
           { key: 'settings',  label: 'Notion Settings' },
@@ -929,6 +931,14 @@ function LeadsView({
           onQuestGenerated={() => { refreshQuests(); playSound('quest_accept', muted); }}
           onDominanceGained={(districtId) => { investInDistrict(districtId); playSound('territory', muted); }}
           externalLeads={leads}
+        />
+      )}
+
+      {leadsTab === 'crm' && (
+        <LeadsCRMPanel
+          playerId={player.id}
+          externalLeads={leads}
+          onLeadsSync={onLeadsSync}
         />
       )}
 
