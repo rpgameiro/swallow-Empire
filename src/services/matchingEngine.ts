@@ -14,20 +14,18 @@ function hasValue(n: number | null | undefined): boolean {
 }
 
 // ─── Completeness check ───────────────────────────────────────────────────────
-// Returns an array of missing-field descriptions. Empty = complete enough to score.
+// Gates on budget + location only. Asset type is intentionally excluded.
 
 function missingFields(investor: Lead, owner: Lead): string[] {
   const missing: string[] = [];
-  // Investor needs: budget (investment_max or estimated_value used as budget), locations, asset_types
+  // Investor needs: budget (investment_max or estimated_value), locations
   if (!hasValue(investor.investment_max) && !hasValue(investor.estimated_value)) {
     missing.push('Investor budget not set (Valor Estimado)');
   }
-  if (!investor.locations.length)   missing.push('Investor location not set (Localização)');
-  if (!investor.asset_types.length) missing.push('Investor asset type not set (Asset)');
-  // Owner needs: estimated_value, locations, asset_types
+  if (!investor.locations.length) missing.push('Investor location not set (Localização)');
+  // Owner needs: estimated_value, locations
   if (!hasValue(owner.estimated_value)) missing.push('Owner asset value not set (Valor Estimado)');
-  if (!owner.locations.length)         missing.push('Owner location not set (Localização)');
-  if (!owner.asset_types.length)       missing.push('Owner asset type not set (Asset)');
+  if (!owner.locations.length)          missing.push('Owner location not set (Localização)');
   return missing;
 }
 
@@ -59,7 +57,7 @@ function checkBudget(investor: Lead, owner: Lead): BudgetResult {
   };
 }
 
-// ─── Asset overlap (hard gate) ────────────────────────────────────────────────
+// ─── Asset overlap (informational only — never blocks a match) ────────────────
 
 interface AssetResult { matches: boolean; score: number; reason: string | null }
 
@@ -124,20 +122,19 @@ function checkUrgency(investor: Lead, owner: Lead): UrgencyResult {
 }
 
 // ─── Data quality bonus (+20) ─────────────────────────────────────────────────
+// 3 fields per side × proportional 10 pts = up to 20 total.
+// Asset type is intentionally excluded — only budget, location, and name are assessed.
 
 function dataQualityBonus(investor: Lead, owner: Lead): number {
   let score = 0;
-  // Each side gets up to 10 points for having clean data
   const invFields = [
     hasValue(investor.investment_max) || hasValue(investor.estimated_value),
     investor.locations.length > 0,
-    investor.asset_types.length > 0,
     !!investor.name && investor.name !== 'Unnamed',
   ];
   const ownFields = [
     hasValue(owner.estimated_value),
     owner.locations.length > 0,
-    owner.asset_types.length > 0,
     !!owner.name && owner.name !== 'Unnamed',
   ];
   const invComplete = invFields.filter(Boolean).length;
@@ -148,10 +145,12 @@ function dataQualityBonus(investor: Lead, owner: Lead): number {
 }
 
 // ─── Tier assignment ──────────────────────────────────────────────────────────
+// Hard gates: budget first, then location.
+// Asset type is NOT a gate — only informational.
 
-function tierFromScore(score: number, budgetOk: boolean, assetOk: boolean): MatchTier {
-  if (!budgetOk) return 'budget_mismatch';
-  if (!assetOk)  return 'low';
+function tierFromScore(score: number, budgetOk: boolean, locationOk: boolean): MatchTier {
+  if (!budgetOk)   return 'budget_mismatch';
+  if (!locationOk) return 'low';
   if (score >= MATCH_TIER_META.legendary.minScore) return 'legendary';
   if (score >= MATCH_TIER_META.strong.minScore)    return 'strong';
   if (score >= MATCH_TIER_META.warm.minScore)      return 'warm';
@@ -179,7 +178,7 @@ function suggestedAction(tier: MatchTier, investor: Lead, owner: Lead): string {
     return `Review ${ownName}'s asking price (${fmt(owner.estimated_value)}) against ${invName}'s budget cap (${fmt(budget)}). Consider negotiating a price reduction or sourcing a different asset.`;
   }
   if (tier === 'incomplete_data') {
-    return `Complete the lead profiles before running matching. Ensure both parties have Valor Estimado, Localização, and Asset set in Notion.`;
+    return `Complete the lead profiles before running matching. Ensure both parties have Valor Estimado and Localização set in Notion.`;
   }
   if (tier === 'legendary') return `Arrange a private introductory meeting between ${invName} and ${ownName}. Prepare a confidential deal brief before the call.`;
   if (tier === 'strong')    return `Send a warm introduction email to both parties. Propose a 30-minute alignment call within the week.`;
@@ -201,7 +200,7 @@ export interface ComputedMatch {
 }
 
 export function computeMatch(investor: Lead, owner: Lead): ComputedMatch {
-  // 1. Completeness — if key fields missing, short-circuit to incomplete_data
+  // 1. Completeness — gates on budget + location only
   const missing = missingFields(investor, owner);
   if (missing.length > 0) {
     return {
@@ -218,11 +217,14 @@ export function computeMatch(investor: Lead, owner: Lead): ComputedMatch {
   // 2. Budget (hard gate)
   const budget = checkBudget(investor, owner);
 
-  // 3. Asset overlap (hard gate — no asset overlap = no valid match)
+  // 3. Asset overlap (informational — score only, never blocks tier)
   const asset = checkAssets(investor, owner);
 
   // 4. Location overlap
   const loc = checkLocations(investor, owner);
+
+  // locationOk: score > 0 means at least one location overlapped (includes Todas wildcard)
+  const locationOk = loc.score > 0;
 
   // 5. Urgency signal
   const urg = checkUrgency(investor, owner);
@@ -230,12 +232,13 @@ export function computeMatch(investor: Lead, owner: Lead): ComputedMatch {
   // 6. Data quality bonus
   const quality = dataQualityBonus(investor, owner);
 
-  // Score: budget mismatch caps at 30; no asset overlap gives 0 bonus from asset
+  // Score: budget mismatch caps at 30; asset contributes 0 when no overlap
   let score = loc.score + asset.score + urg.score + quality;
   if (!budget.compatible) score = Math.min(score, 30);
   score = Math.min(score, 100);
 
-  const tier = tierFromScore(score, budget.compatible, asset.matches);
+  // Tier: gated by budget then location; asset.matches is NOT used here
+  const tier = tierFromScore(score, budget.compatible, locationOk);
 
   const reasons: string[] = [];
   if (!budget.compatible) {
@@ -243,9 +246,9 @@ export function computeMatch(investor: Lead, owner: Lead): ComputedMatch {
   } else if (budget.reason) {
     reasons.push(budget.reason);
   }
-  if (asset.reason)  reasons.push(asset.reason);
-  if (loc.reason)    reasons.push(loc.reason);
-  if (urg.reason)    reasons.push(urg.reason);
+  if (asset.reason) reasons.push(asset.reason);
+  if (loc.reason)   reasons.push(loc.reason);
+  if (urg.reason)   reasons.push(urg.reason);
   if (!reasons.length) reasons.push('Shared market segment with exploratory potential');
 
   return {
@@ -268,7 +271,7 @@ export function computeAllMatches(leads: Lead[]): ComputedMatch[] {
     }
   }
 
-  // Sort: budget-compatible first, then by score desc; budget_mismatch and incomplete last
+  // Sort: real tiers first by score desc; budget_mismatch next; incomplete_data last
   return results.sort((a, b) => {
     const rankTier = (t: MatchTier) =>
       t === 'incomplete_data' ? 2 : t === 'budget_mismatch' ? 1 : 0;
