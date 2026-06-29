@@ -630,11 +630,7 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
     try {
       const fresh = await getLeads(playerId);
       setLocalLeads(fresh);
-      // Only propagate to App state if we got results; avoids wiping externalLeads
-      // on permission errors that return an empty set rather than throwing.
-      if (fresh.length > 0) {
-        onLeadsSync(fresh);
-      }
+      onLeadsSync(fresh);
     } catch (err) {
       console.error('[LeadsCRMPanel] refresh failed:', err);
     }
