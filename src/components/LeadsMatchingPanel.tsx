@@ -705,6 +705,7 @@ export function LeadsMatchingPanel({
   const [matches, setMatches] = useState<LeadMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [filterTipo, setFilterTipo] = useState<'all' | LeadTipo>('all');
@@ -797,50 +798,52 @@ export function LeadsMatchingPanel({
   const runMatchEngine = useCallback(async () => {
     if (running) return;
     setRunning(true);
+    setMatchError(null);
 
-    const activeLs = leads.filter(l => l.status === 'active');
-    const computed = computeAllMatches(activeLs);
+    try {
+      const t0 = performance.now();
 
-    // Get existing match pairs to avoid duplicates
-    const existingPairs = new Set(matches.map(m => `${m.investor_lead_id}_${m.owner_lead_id}`));
+      const activeLs = leads.filter(l => l.status === 'active');
+      const investors = activeLs.filter(l => l.tipo === 'Investidor');
+      const owners    = activeLs.filter(l => l.tipo === 'Proprietário');
+      const computed  = computeAllMatches(activeLs);
 
-    const newMatches = computed.filter(c =>
-      !existingPairs.has(`${c.investor.id}_${c.owner.id}`)
-    );
+      const t1 = performance.now();
+      console.log(`[MatchEngine] ${investors.length} investors × ${owners.length} owners = ${computed.length} candidate pairs (${(t1 - t0).toFixed(1)}ms compute)`);
 
-    if (newMatches.length === 0) {
-      setRunning(false);
-      return;
-    }
+      // Get existing match pairs to avoid duplicates
+      const existingPairs = new Set(matches.map(m => `${m.investor_lead_id}_${m.owner_lead_id}`));
+      const newMatches = computed.filter(c => !existingPairs.has(`${c.investor.id}_${c.owner.id}`));
 
-    // Process matches: award XP, generate quests for high-quality matches
-    const saved: LeadMatch[] = [];
-    let totalXP = 0;
+      console.log(`[MatchEngine] ${newMatches.length} new matches to save (${computed.length - newMatches.length} already exist)`);
 
-    for (const m of newMatches) {
-      const xp = MATCH_XP[m.tier];
-      let questGenerated = false;
-      let districtId: string | null = null;
+      if (newMatches.length === 0) return;
 
-      // Find matching district from lead locations
-      if (m.tier === 'legendary' || m.tier === 'strong') {
-        const allLocations = [...m.investor.locations, ...m.owner.locations];
-        const matchedDistrict = districts.find(d =>
-          allLocations.some(loc =>
-            d.name.toLowerCase().includes(loc.toLowerCase()) ||
-            loc.toLowerCase().includes(d.name.toLowerCase())
-          )
-        );
+      // Process matches: award XP, generate quests for high-quality matches
+      const saved: LeadMatch[] = [];
+      let totalXP = 0;
 
-        if (matchedDistrict) {
-          districtId = matchedDistrict.id;
-          // Boost district dominance for strong/legendary matches
-          const domXP = m.tier === 'legendary' ? 150 : 75;
-          onDominanceGained(matchedDistrict.id, domXP);
-        }
+      for (const m of newMatches) {
+        const xp = MATCH_XP[m.tier];
+        let questGenerated = false;
+        let districtId: string | null = null;
 
-        // Auto-generate action quest sequence for legendary/strong matches
+        // Find matching district from lead locations
         if (m.tier === 'legendary' || m.tier === 'strong') {
+          const allLocations = [...m.investor.locations, ...m.owner.locations];
+          const matchedDistrict = districts.find(d =>
+            allLocations.some(loc =>
+              d.name.toLowerCase().includes(loc.toLowerCase()) ||
+              loc.toLowerCase().includes(d.name.toLowerCase())
+            )
+          );
+
+          if (matchedDistrict) {
+            districtId = matchedDistrict.id;
+            const domXP = m.tier === 'legendary' ? 150 : 75;
+            onDominanceGained(matchedDistrict.id, domXP);
+          }
+
           const matchQuests = generateMatchQuests({
             playerId,
             playerLevel,
@@ -855,31 +858,34 @@ export function LeadsMatchingPanel({
           try {
             const inserted = await insertDynamicQuests(matchQuests);
             questGenerated = true;
-            // Notify for each generated quest so the quest panel refreshes
             inserted.forEach(q => onQuestGenerated(q));
           } catch (_) { /* non-fatal */ }
         }
+
+        const tSave0 = performance.now();
+        const saved_match = await saveLeadMatch(playerId, m, xp, questGenerated, districtId);
+        console.log(`[MatchEngine] saved match ${m.investor.name} → ${m.owner.name} (${m.tier}) in ${(performance.now() - tSave0).toFixed(1)}ms`);
+
+        saved.push({ ...saved_match, investor: m.investor, owner: m.owner });
+        totalXP += xp;
+
+        if (m.tier === 'legendary') {
+          setCinematic({ match: m, investor: m.investor, owner: m.owner });
+        }
       }
 
-      const saved_match = await saveLeadMatch(playerId, m, xp, questGenerated, districtId);
-      saved.push({
-        ...saved_match,
-        investor: m.investor,
-        owner: m.owner,
-      });
+      if (totalXP > 0) onXPGained(totalXP);
+      setMatches(prev => [...saved, ...prev]);
 
-      totalXP += xp;
-
-      // Show cinematic for legendary matches
-      if (m.tier === 'legendary') {
-        setCinematic({ match: m, investor: m.investor, owner: m.owner });
-      }
+      const tTotal = performance.now() - t0;
+      console.log(`[MatchEngine] done — ${saved.length} saved, ${totalXP} XP, ${tTotal.toFixed(0)}ms total`);
+    } catch (err: unknown) {
+      const msg = (err as { message?: string }).message ?? 'Match engine failed';
+      console.error('[MatchEngine] error:', err);
+      setMatchError(msg);
+    } finally {
+      setRunning(false);
     }
-
-    if (totalXP > 0) onXPGained(totalXP);
-
-    setMatches(prev => [...saved, ...prev]);
-    setRunning(false);
   }, [running, leads, matches, playerId, districts, playerLevel, playerDistricts, onXPGained, onQuestGenerated, onDominanceGained]);
 
   const investors = leads.filter(l => l.tipo === 'Investidor');
@@ -954,6 +960,19 @@ export function LeadsMatchingPanel({
             </button>
           </div>
         </div>
+
+        {matchError && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl px-3 py-2.5 border border-red-900/50 bg-red-950/30">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-0.5">Match Engine Error</p>
+              <p className="text-[11px] text-red-300/80 break-words">{matchError}</p>
+            </div>
+            <button onClick={() => setMatchError(null)} className="text-red-600 hover:text-red-400 transition-colors flex-shrink-0">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-2 mt-4">
