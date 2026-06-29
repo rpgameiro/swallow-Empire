@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, X, Star, Building2, DollarSign, MapPin, Globe, CreditCard as Edit2, Trash2, Phone, Mail, Calendar, ChevronDown, Check, Users } from 'lucide-react';
+import {
+  Plus, Search, X, Star, Building2, DollarSign, MapPin, Globe,
+  CreditCard as Edit2, Trash2, Phone, Mail, Calendar, ChevronDown,
+  Check, Users, PhoneCall, Clock, AlertCircle,
+} from 'lucide-react';
 import {
   Lead, LeadTipo, LeadStatus, LeadUrgency, LeadSource,
   LOCATION_OPTIONS, ASSET_TYPE_OPTIONS,
@@ -50,6 +54,34 @@ function parseEuro(s: string): number {
   if (clean.endsWith('M')) return Math.round(parseFloat(clean) * 1_000_000) || 0;
   if (clean.endsWith('K')) return Math.round(parseFloat(clean) * 1_000) || 0;
   return Math.round(parseFloat(clean)) || 0;
+}
+
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function todayLocalMidnight(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dateInDays(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function isOverdue(lead: Lead): boolean {
+  if (!lead.next_follow_up) return false;
+  const followUpDate = new Date(lead.next_follow_up.slice(0, 10) + 'T00:00:00');
+  return followUpDate < todayLocalMidnight();
+}
+
+function daysOverdue(next_follow_up: string): number {
+  const followUpDate = new Date(next_follow_up.slice(0, 10) + 'T00:00:00');
+  return Math.floor((todayLocalMidnight().getTime() - followUpDate.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
@@ -187,12 +219,26 @@ function LeadDrawer({
   const [form, setForm] = useState<CRMFormData>(() =>
     lead ? leadToForm(lead) : BLANK_FORM
   );
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const f = <K extends keyof CRMFormData>(k: K, v: CRMFormData[K]) =>
+  const f = <K extends keyof CRMFormData>(k: K, v: CRMFormData[K]) => {
     setForm(prev => ({ ...prev, [k]: v }));
+    if (k === 'next_follow_up' || k === 'status') setFormError(null);
+  };
 
   const toggle = (arr: string[], val: string) =>
     arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val];
+
+  const handleSaveClick = () => {
+    if (!form.name.trim()) return;
+    const needsFollowUp = form.status === 'active' || form.status === 'matched';
+    if (needsFollowUp && !form.next_follow_up) {
+      setFormError('Next Follow-Up is required for active and matched leads.');
+      return;
+    }
+    setFormError(null);
+    onSave(form);
+  };
 
   return (
     <>
@@ -353,10 +399,23 @@ function LeadDrawer({
               <input className="crm-input" type="date" value={form.last_contact_at} onChange={e => f('last_contact_at', e.target.value)} />
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 block">
-                <Calendar className="w-3 h-3 inline mr-1" />Next Follow-Up
+              <label
+                className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1"
+                style={{ color: formError && !form.next_follow_up ? '#f87171' : '#475569' }}
+              >
+                <Calendar className="w-3 h-3" />
+                Next Follow-Up
+                {(form.status === 'active' || form.status === 'matched') && (
+                  <span className="text-red-400 ml-0.5">*</span>
+                )}
               </label>
-              <input className="crm-input" type="date" value={form.next_follow_up} onChange={e => f('next_follow_up', e.target.value)} />
+              <input
+                className="crm-input"
+                type="date"
+                value={form.next_follow_up}
+                onChange={e => f('next_follow_up', e.target.value)}
+                style={formError && !form.next_follow_up ? { borderColor: 'rgba(248,113,113,0.5)' } : {}}
+              />
             </div>
           </div>
 
@@ -419,30 +478,233 @@ function LeadDrawer({
 
         {/* Footer */}
         <div className="flex flex-col gap-2 px-5 py-4 border-t border-slate-800/60 flex-shrink-0">
+          {formError && (
+            <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 break-words">
+              {formError}
+            </p>
+          )}
           {saveError && (
             <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 break-words">
               {saveError}
             </p>
           )}
           <div className="flex gap-2">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-slate-800 hover:border-slate-600 text-slate-500 hover:text-slate-300 transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => form.name.trim() && onSave(form)}
-            disabled={!form.name.trim() || saving}
-            className="flex-1 py-2.5 rounded-xl text-sm font-black border transition-all active:scale-95 disabled:opacity-40"
-            style={{ backgroundColor: '#f59e0b18', borderColor: '#f59e0b50', color: '#f59e0b' }}
-          >
-            {saving ? 'Saving…' : 'Save Lead'}
-          </button>
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-slate-800 hover:border-slate-600 text-slate-500 hover:text-slate-300 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveClick}
+              disabled={!form.name.trim() || saving}
+              className="flex-1 py-2.5 rounded-xl text-sm font-black border transition-all active:scale-95 disabled:opacity-40"
+              style={{ backgroundColor: '#f59e0b18', borderColor: '#f59e0b50', color: '#f59e0b' }}
+            >
+              {saving ? 'Saving…' : 'Save Lead'}
+            </button>
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+// ─── LogContactPopover ────────────────────────────────────────────────────────
+
+function LogContactPopover({
+  lead,
+  onConfirm,
+  onCancel,
+  saving,
+}: {
+  lead: Lead;
+  onConfirm: (lastContact: string, nextFollowUp: string | null) => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const today = todayStr();
+  const [lastContact, setLastContact] = useState(today);
+  const [nextFollowUp, setNextFollowUp] = useState(() => dateInDays(7));
+  const [error, setError] = useState<string | null>(null);
+
+  const requiresFollowUp = lead.status === 'active' || lead.status === 'matched';
+
+  const handleConfirm = () => {
+    if (requiresFollowUp && !nextFollowUp) {
+      setError('Next Follow-Up is required for active and matched leads.');
+      return;
+    }
+    onConfirm(lastContact, nextFollowUp || null);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={onCancel} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 w-full max-w-sm shadow-2xl space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-950/60 border border-emerald-900/50 flex items-center justify-center flex-shrink-0">
+                <PhoneCall className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <p className="font-black text-white text-sm">Log Contact</p>
+                <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+                  {lead.name}{lead.company ? ` · ${lead.company}` : ''}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onCancel}
+              className="p-1.5 rounded-lg border border-slate-800 hover:border-slate-600 text-slate-500 hover:text-slate-300 transition-all"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Fields */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 block">
+                <Calendar className="w-3 h-3 inline mr-1" />Last Contact
+              </label>
+              <input
+                className="crm-input"
+                type="date"
+                value={lastContact}
+                onChange={e => setLastContact(e.target.value)}
+              />
+            </div>
+            <div>
+              <label
+                className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1"
+                style={{ color: error ? '#f87171' : '#475569' }}
+              >
+                <Calendar className="w-3 h-3" />
+                Next Follow-Up
+                {requiresFollowUp && <span className="text-red-400">*</span>}
+              </label>
+              <input
+                className="crm-input"
+                type="date"
+                value={nextFollowUp}
+                onChange={e => { setNextFollowUp(e.target.value); setError(null); }}
+                style={error ? { borderColor: 'rgba(248,113,113,0.5)' } : {}}
+              />
+              {!requiresFollowUp && (
+                <p className="text-[10px] text-slate-600 mt-1">
+                  Optional — lead is {lead.status}.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-slate-800 hover:border-slate-600 text-slate-500 hover:text-slate-300 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl text-sm font-black border transition-all active:scale-95 disabled:opacity-40"
+              style={{ backgroundColor: '#10b98118', borderColor: '#10b98150', color: '#10b981' }}
+            >
+              {saving ? 'Saving…' : 'Log Contact'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── OverdueSection ───────────────────────────────────────────────────────────
+
+function OverdueSection({
+  leads,
+  onEdit,
+}: {
+  leads: Lead[];
+  onEdit: (lead: Lead) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  if (leads.length === 0) return null;
+
+  return (
+    <div
+      className="rounded-xl border overflow-hidden"
+      style={{ borderColor: '#ef444430', backgroundColor: '#ef444406' }}
+    >
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-red-950/20 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Clock className="w-3.5 h-3.5 text-red-400" />
+          <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">
+            Overdue Follow-Up
+          </span>
+          <span
+            className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
+            style={{ backgroundColor: '#ef444420', border: '1px solid #ef444440', color: '#f87171' }}
+          >
+            {leads.length}
+          </span>
+        </div>
+        <ChevronDown
+          className="w-3.5 h-3.5 text-red-500 transition-transform"
+          style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+
+      {!collapsed && (
+        <div className="px-3 pb-3 pt-1 space-y-1.5">
+          {leads.map(lead => {
+            const overdueDays = daysOverdue(lead.next_follow_up!);
+            const isInvestor = lead.tipo === 'Investidor';
+            const accentColor = isInvestor ? '#3b82f6' : '#10b981';
+
+            return (
+              <button
+                key={lead.id}
+                onClick={() => onEdit(lead)}
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border text-left transition-all hover:bg-red-900/10"
+                style={{ borderColor: '#ef444425', backgroundColor: '#ef444408' }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black"
+                  style={{ backgroundColor: accentColor + '20', color: accentColor }}
+                >
+                  {lead.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-black text-white truncate">{lead.name}</div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    {lead.company && <span className="text-slate-600 truncate">{lead.company}</span>}
+                    <span className="font-bold text-red-400">
+                      {overdueDays === 1 ? '1 day overdue' : `${overdueDays} days overdue`}
+                    </span>
+                  </div>
+                </div>
+                <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -454,12 +716,14 @@ function LeadCRMRow({
   onDelete,
   onStarChange,
   onStatusChange,
+  onLogContact,
 }: {
   lead: Lead;
   onEdit: () => void;
   onDelete: () => void;
   onStarChange: (stars: number) => void;
   onStatusChange: (status: LeadStatus) => void;
+  onLogContact: () => void;
 }) {
   const [statusOpen, setStatusOpen] = useState(false);
   const isInvestor = lead.tipo === 'Investidor';
@@ -467,8 +731,10 @@ function LeadCRMRow({
   const status = STATUS_META[lead.status];
   const urgency = URGENCY_META[lead.urgency];
 
-  const followUpDate = lead.next_follow_up ? new Date(lead.next_follow_up) : null;
-  const followUpPast = followUpDate != null && followUpDate < new Date();
+  const followUpDate = lead.next_follow_up
+    ? new Date(lead.next_follow_up.slice(0, 10) + 'T00:00:00')
+    : null;
+  const followUpPast = followUpDate != null && followUpDate < todayLocalMidnight();
   const followUpLabel = followUpDate
     ? followUpDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     : null;
@@ -582,7 +848,16 @@ function LeadCRMRow({
         )}
       </div>
 
-      {/* Actions */}
+      {/* Log Contact — always visible */}
+      <button
+        onClick={onLogContact}
+        className="p-1.5 rounded-lg border border-slate-800 hover:border-emerald-800/60 text-slate-600 hover:text-emerald-400 transition-all flex-shrink-0"
+        title="Log contact"
+      >
+        <PhoneCall className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Edit / Delete — hover only */}
       <div className="flex gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={onEdit}
@@ -623,6 +898,8 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [logContactLead, setLogContactLead] = useState<Lead | null>(null);
+  const [logContactSaving, setLogContactSaving] = useState(false);
 
   const leads = (externalLeads && externalLeads.length > 0) ? externalLeads : localLeads;
 
@@ -712,6 +989,32 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
     await refresh();
   }, [refresh]);
 
+  const handleLogContact = useCallback(async (lastContact: string, nextFollowUp: string | null) => {
+    if (!logContactLead) return;
+    setLogContactSaving(true);
+    try {
+      await updateLead(logContactLead.id, {
+        last_contact_at: lastContact || null,
+        next_follow_up: nextFollowUp,
+        bolt_last_updated_at: new Date().toISOString(),
+      });
+      setLogContactLead(null);
+      await refresh();
+    } catch (err) {
+      console.error('[LeadsCRMPanel] log contact failed:', err);
+    } finally {
+      setLogContactSaving(false);
+    }
+  }, [logContactLead, refresh]);
+
+  const overdue = leads
+    .filter(isOverdue)
+    .sort((a, b) => {
+      const dA = new Date(a.next_follow_up!.slice(0, 10) + 'T00:00:00').getTime();
+      const dB = new Date(b.next_follow_up!.slice(0, 10) + 'T00:00:00').getTime();
+      return dA - dB;
+    });
+
   const filtered = leads
     .filter(l => filterTipo === 'all' || l.tipo === filterTipo)
     .filter(l => filterStatus === 'all' || l.status === filterStatus)
@@ -726,8 +1029,8 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
       );
     });
 
-  const investors  = leads.filter(l => l.tipo === 'Investidor');
-  const owners     = leads.filter(l => l.tipo === 'Proprietário');
+  const investors   = leads.filter(l => l.tipo === 'Investidor');
+  const owners      = leads.filter(l => l.tipo === 'Proprietário');
   const activeCount = leads.filter(l => l.status === 'active').length;
 
   return (
@@ -742,6 +1045,16 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
           onCancel={() => { setDrawerOpen(false); setEditingLead(null); setSaveError(null); }}
           saving={saving}
           saveError={saveError}
+        />
+      )}
+
+      {/* Log Contact popover */}
+      {logContactLead && (
+        <LogContactPopover
+          lead={logContactLead}
+          onConfirm={handleLogContact}
+          onCancel={() => setLogContactLead(null)}
+          saving={logContactSaving}
         />
       )}
 
@@ -790,6 +1103,9 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
             <p className="text-white font-bold text-lg mb-0.5">Contact Management</p>
             <p className="text-slate-500 text-xs">
               {investors.length} investors · {owners.length} owners · {activeCount} active
+              {overdue.length > 0 && (
+                <span className="ml-2 font-bold text-red-400">· {overdue.length} overdue</span>
+              )}
             </p>
           </div>
           <button
@@ -898,6 +1214,12 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
         })}
       </div>
 
+      {/* Overdue section */}
+      <OverdueSection
+        leads={overdue}
+        onEdit={lead => { setEditingLead(lead); setDrawerOpen(true); }}
+      />
+
       {/* List */}
       {loading ? (
         <div className="text-center py-12 text-slate-600 text-sm">Loading leads…</div>
@@ -926,6 +1248,7 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
               onDelete={() => setDeleteConfirmId(lead.id)}
               onStarChange={stars => handleStarChange(lead, stars)}
               onStatusChange={status => handleStatusChange(lead, status)}
+              onLogContact={() => setLogContactLead(lead)}
             />
           ))}
           <p className="text-[10px] text-slate-700 text-center pt-1">
