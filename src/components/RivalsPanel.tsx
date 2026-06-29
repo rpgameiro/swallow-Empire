@@ -4,8 +4,8 @@ import {
   getThreatLevel, getRivalTypeLabel, EVENT_TYPE_META,
 } from '../services/rivalEngine';
 import {
-  Swords, TrendingDown, AlertTriangle, Info, Star, Shield,
-  Building2, ChevronDown, ChevronUp, Eye, Activity, Users, Zap,
+  Swords, TrendingDown, AlertTriangle, Star, Shield,
+  Building2, ChevronDown, ChevronUp, Eye, Activity, Users,
 } from 'lucide-react';
 
 // ─── Threat meter ─────────────────────────────────────────────────────────────

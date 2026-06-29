@@ -115,9 +115,8 @@ function AlertToast({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export const DistrictAlerts = ({ districtEvents, districtMarket, districts }: DistrictAlertsProps) => {
+export const DistrictAlerts = ({ districtEvents, districtMarket: _districtMarket, districts }: DistrictAlertsProps) => {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
 
   // Collect all active (non-expired, non-dismissed) events from last 2 hours
   const cutoff = Date.now() - 2 * 3600 * 1000;

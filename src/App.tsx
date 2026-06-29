@@ -96,12 +96,11 @@ function App() {
     dismissSuggestion,
     snoozeSuggestion,
     refreshSuggestions,
-    dismissRivalEvent,
   } = useGameState();
 
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
-  const [prevTab, setPrevTab] = useState<Tab>('overview');
+  const [_prevTab, setPrevTab] = useState<Tab>('overview');
   const [tabTransition, setTabTransition] = useState(false);
   const [analyticsSubtab, setAnalyticsSubtab] = useState<'xp' | 'market'>('xp');
   const [showPenaltyNotif, setShowPenaltyNotif] = useState(false);
@@ -237,10 +236,6 @@ function App() {
   // Parallax offset for orbs based on mouse
   const parallaxX = (mousePos.x - 0.5) * 30;
   const parallaxY = (mousePos.y - 0.5) * 20;
-
-  const ownedOfficeCount = gameState.officeUpgrades
-    .filter(u => ['small_office','meeting_room','marketing_team','investment_division'].includes(u.slug) && gameState.purchasedUpgradeSlugs.has(u.slug)).length;
-  const officeTotal = 4;
 
   const allyCount = Array.from(gameState.npcRelationships.values())
     .filter(r => r.relationship_status === 'ally' || r.relationship_status === 'partner').length;
@@ -879,8 +874,6 @@ function OverviewTab({
 }
 
 import { LOCATION_OPTIONS } from './types/game';
-import type { DistrictMarketData } from './types/game';
-import type { DynamicQuest } from './services/questEngine';
 
 function LeadsView({
   player, districts, playerDistricts, districtMarket,

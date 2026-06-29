@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Crown, Flame, Star, TrendingUp, DollarSign, Users,
-  Building2, MapPin, Activity, BarChart2, RefreshCw,
-  ArrowRight, Zap, Target, Globe, Shield,
+  MapPin, Activity, BarChart2, RefreshCw,
+  Target, Shield,
 } from 'lucide-react';
 import { Lead, LeadMatch, MatchTier, MATCH_TIER_META, District } from '../types/game';
 import { getLeads, getLeadMatches } from '../services/matchingEngine';
@@ -90,13 +90,6 @@ function fmtM(n: number): string {
   return `€${n}`;
 }
 
-function fmtShort(n: number): string {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)         return `${(n / 1_000).toFixed(0)}k`;
-  return `${n}`;
-}
-
 // ─── Sparkline ────────────────────────────────────────────────────────────────
 
 function Sparkline({ values, color, w = 80, h = 28 }: { values: number[]; color: string; w?: number; h?: number }) {
@@ -162,52 +155,6 @@ function AnimatedNumber({ target, prefix = '', suffix = '', color, decimals = 0 
   );
 }
 
-// ─── KPI card ─────────────────────────────────────────────────────────────────
-
-function KPICard({
-  label, value, sub, color, icon: Icon, sparkValues, glow = false, delay = 0,
-}: {
-  label: string; value: number; sub?: string; color: string;
-  icon: typeof Crown; sparkValues?: number[]; glow?: boolean; delay?: number;
-}) {
-  const isMonetary = label.toLowerCase().includes('value') || label.toLowerCase().includes('deal');
-  const displayValue = isMonetary ? fmtM(value) : value.toLocaleString();
-
-  return (
-    <div
-      className={`mad-card relative rounded-xl overflow-hidden p-4 ${glow ? 'mad-glow' : ''}`}
-      style={{
-        animationDelay: `${delay}s`,
-        '--card-glow': color + '30',
-        '--card-glow-far': color + '10',
-        border: `1px solid ${color}${glow ? '35' : '20'}`,
-        background: `linear-gradient(145deg, ${color}06, ${C.bg})`,
-      } as React.CSSProperties}
-    >
-      <div className="mad-scan" />
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ backgroundColor: color + '18', border: `1px solid ${color}28` }}
-        >
-          <Icon className="w-4 h-4" style={{ color }} />
-        </div>
-        {sparkValues && <Sparkline values={sparkValues} color={color} />}
-      </div>
-      <div className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: color + '70' }}>
-        {label}
-      </div>
-      <div className="text-2xl leading-none mb-0.5">
-        <AnimatedNumber target={value} color={color} decimals={isMonetary ? 0 : 0} />
-        {isMonetary && (
-          <span className="text-2xl font-black" style={{ color }}>{fmtM(value)}</span>
-        )}
-      </div>
-      {sub && <div className="text-[10px] text-slate-600 mt-1 font-mono">{sub}</div>}
-    </div>
-  );
-}
-
 // ─── Big hero metric ──────────────────────────────────────────────────────────
 
 function HeroMetric({ value, label, sub, color, size = 'xl' }: {
@@ -253,37 +200,6 @@ function ScoreRing({ score, max = 100, color, size = 96, label }: {
       <div className="absolute inset-0 flex flex-col items-center justify-center mad-count">
         <span className="font-black leading-none" style={{ color, fontSize: size * 0.22 }}>{Math.round(score)}</span>
         {label && <span className="text-slate-600 uppercase font-bold" style={{ fontSize: size * 0.09 }}>{label}</span>}
-      </div>
-    </div>
-  );
-}
-
-// ─── Horizontal bar with animation ───────────────────────────────────────────
-
-function AnimBar({ label, value, max, color, sub, index = 0, rightLabel }: {
-  label: string; value: number; max: number; color: string;
-  sub?: string; index?: number; rightLabel?: string;
-}) {
-  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
-  return (
-    <div className="flex items-center gap-3" style={{ animationDelay: `${index * 0.06}s` }}>
-      <div className="flex-shrink-0" style={{ width: 110 }}>
-        <div className="text-xs font-bold text-white truncate">{label}</div>
-        {sub && <div className="text-[9px] text-slate-600 truncate">{sub}</div>}
-      </div>
-      <div className="flex-1 relative h-5 bg-slate-900/80 rounded overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.04)' }}>
-        <div
-          className="mad-bar absolute inset-y-0 left-0 rounded"
-          style={{
-            width: `${pct}%`, backgroundColor: color,
-            animationDelay: `${index * 0.06}s`,
-            boxShadow: `0 0 6px ${color}50`,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent" />
-      </div>
-      <div className="text-xs font-black font-mono w-12 text-right flex-shrink-0" style={{ color }}>
-        {rightLabel ?? Math.round(pct) + '%'}
       </div>
     </div>
   );
@@ -546,7 +462,7 @@ interface MatchAnalyticsDashboardProps {
   externalLeads?: Lead[];
 }
 
-export function MatchAnalyticsDashboard({ playerId, districts, externalLeads }: MatchAnalyticsDashboardProps) {
+export function MatchAnalyticsDashboard({ playerId, districts: _districts, externalLeads }: MatchAnalyticsDashboardProps) {
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
   const [matches, setMatches] = useState<LeadMatch[]>([]);
   const [loading, setLoading] = useState(true);

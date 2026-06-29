@@ -8,7 +8,6 @@ interface SkillTreeProps {
 }
 
 const STAT_CAPS = 100;
-const MAX_MANUAL_INVEST = 15; // soft cap visual suggestion, not enforced
 
 const SKILL_ORDER: (keyof PlayerSkills)[] = [
   'negotiation', 'networking', 'focus', 'discipline', 'leadership', 'reputation',

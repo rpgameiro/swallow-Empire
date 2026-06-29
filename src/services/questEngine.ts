@@ -193,10 +193,6 @@ const LEGENDARY_TEMPLATES = [
 
 // ─── Generator ────────────────────────────────────────────────────────────────
 
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
 function seededIndex(seed: number, len: number): number {
   return seed % len;
 }
@@ -237,7 +233,7 @@ function difficultyFromLevel(base: number, level: number): number {
 }
 
 export function generateDailyQuests(ctx: QuestGeneratorContext): Omit<DynamicQuest, 'id' | 'generated_at'>[] {
-  const { player, playerDistricts, districts } = ctx;
+  const { player, playerDistricts } = ctx;
   const results: Omit<DynamicQuest, 'id' | 'generated_at'>[] = [];
   const expiry = dailyExpiry();
   const seed = new Date().getDate() + player.level;
@@ -294,7 +290,7 @@ export function generateDailyQuests(ctx: QuestGeneratorContext): Omit<DynamicQue
 }
 
 export function generateWeeklyQuests(ctx: QuestGeneratorContext): Omit<DynamicQuest, 'id' | 'generated_at'>[] {
-  const { player, playerDistricts, districts } = ctx;
+  const { player, playerDistricts } = ctx;
   const results: Omit<DynamicQuest, 'id' | 'generated_at'>[] = [];
   const expiry = weeklyExpiry();
   const weekNum = Math.ceil(new Date().getDate() / 7) + player.level;
@@ -345,7 +341,7 @@ export function generateWeeklyQuests(ctx: QuestGeneratorContext): Omit<DynamicQu
 }
 
 export function generateMainQuests(ctx: QuestGeneratorContext): Omit<DynamicQuest, 'id' | 'generated_at'>[] {
-  const { player, playerDistricts, districts } = ctx;
+  const { player, districts } = ctx;
   const t = MAIN_TEMPLATES[0];
   const results: Omit<DynamicQuest, 'id' | 'generated_at'>[] = [];
 
@@ -476,7 +472,7 @@ const MATCH_QUEST_STEPS: MatchQuestTemplate[] = [
     expiryDays: 5,
   },
   {
-    title: ctx => `Organise Site Visit`,
+    title: _ctx => `Organise Site Visit`,
     description: ctx =>
       `Coordinate a physical site visit to the asset with ${ctx.investorName}. Prepare the property brief, arrange logistics, and accompany the investor.`,
     category: 'acquisition',
@@ -489,7 +485,7 @@ const MATCH_QUEST_STEPS: MatchQuestTemplate[] = [
     expiryDays: 7,
   },
   {
-    title: ctx => `Send Investment Deck`,
+    title: _ctx => `Send Investment Deck`,
     description: ctx =>
       `Prepare and deliver a tailored investment deck to ${ctx.investorName} covering the ${ctx.ownerName} asset. Include financial projections, market comparables, and deal structure.`,
     category: 'strategy',
@@ -502,7 +498,7 @@ const MATCH_QUEST_STEPS: MatchQuestTemplate[] = [
     expiryDays: 7,
   },
   {
-    title: ctx => `Negotiate Terms`,
+    title: _ctx => `Negotiate Terms`,
     description: ctx =>
       `Lead the negotiation between ${ctx.investorName} and ${ctx.ownerName}. Align on deal structure, price, and timeline. Aim to secure signed heads of terms.`,
     category: 'deals',
@@ -662,7 +658,6 @@ export const refreshWeeklyQuests = async (ctx: QuestGeneratorContext): Promise<D
 
 export const ensureMainQuests = async (ctx: QuestGeneratorContext): Promise<DynamicQuest[]> => {
   const hasMain = ctx.existingActive.some(q => q.quest_type === 'main');
-  const hasCompleted = ctx.existingActive.filter(q => q.quest_type === 'main' && q.status === 'completed');
 
   if (hasMain && (ctx.existingActive.filter(q => q.quest_type === 'main' && q.status === 'active').length > 0)) {
     return ctx.existingActive.filter(q => q.quest_type === 'main');
@@ -699,7 +694,6 @@ export function timeRemaining(expiresAt: string | null): { label: string; urgent
 
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
-  const urgent = ms < 2 * 3_600_000; // under 2h
 
   if (h >= 24) {
     const d = Math.floor(h / 24);

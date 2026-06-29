@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import {
-  NPC, PlayerNPCRelationship, NPCDialogue, NPCDialogueChoice,
+  NPC, PlayerNPCRelationship, NPCDialogue,
   RelationshipStatus, NPCPersonality,
 } from '../types/game';
 

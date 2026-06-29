@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Handshake, DollarSign, TrendingUp, Star, Crown, Zap, Shield,
-  Clock, ChevronRight, X, AlertTriangle, Trophy, Flame,
+  ChevronRight, X, AlertTriangle, Trophy, Flame,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -319,13 +319,6 @@ export function DealCinematicSequence({ deal, onComplete, onAbort }: Props) {
       mountedRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
-
-  const advance = useCallback((toPhase: Phase, delay = 0) => {
-    setTimeout(() => {
-      if (!mountedRef.current) return;
-      setPhase(toPhase);
-    }, delay);
   }, []);
 
   // Auto-advance approach phase after 2.5s

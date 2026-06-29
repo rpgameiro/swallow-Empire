@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Player, PlayerStats, PlayerReputation,
   SKILL_COLORS, SKILL_LABELS, SKILL_ICONS,

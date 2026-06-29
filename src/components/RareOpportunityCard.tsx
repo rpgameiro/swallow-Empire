@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Building2, Briefcase, Globe, Crown, Star, BarChart2, Gem, Award, Trophy,
-  Clock, Zap, TrendingUp, CheckCircle2, XCircle, AlertTriangle, Lock,
+  Zap, TrendingUp, CheckCircle2, XCircle, AlertTriangle, Lock,
 } from 'lucide-react';
 import { ActiveRareOpportunity, RareTier, PlayerReputation } from '../types/game';
 

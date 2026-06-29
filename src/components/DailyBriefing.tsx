@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import {
   Target, Phone, MapPin, Zap, TrendingUp, Crown,
-  AlertTriangle, CheckCircle, Clock, Star, Building2,
-  ChevronRight, Flame, Award, BarChart3,
+  AlertTriangle, CheckCircle, Star, Building2,
+  ChevronRight, Flame, Award,
 } from 'lucide-react';
 import {
   Player, PlayerDistrict, District, NPC,
@@ -103,7 +103,7 @@ export function generateDailyBriefing(
   npcs: NPC[],
   npcRelationships: Map<string, PlayerNPCRelationship>,
   recentMatches: ComputedMatch[],
-  reputation: PlayerReputation | null,
+  _reputation: PlayerReputation | null,
 ): DailyBriefingData {
   const now = new Date().toISOString();
 
@@ -843,19 +843,19 @@ export function useDailyBriefing(
   npcs: NPC[],
   npcRelationships: Map<string, PlayerNPCRelationship>,
   recentMatches: ComputedMatch[],
-  reputation: PlayerReputation | null,
+  _reputation: PlayerReputation | null,
 ): DailyBriefingData | null {
   return useMemo(() => {
     if (!player) return null;
     return generateDailyBriefing(
       player, districts, playerDistricts,
       dynamicQuests, npcs, npcRelationships,
-      recentMatches, reputation,
+      recentMatches, _reputation,
     );
   }, [
     player?.id, player?.level, player?.current_xp, player?.empire_value,
     player?.monthly_income, playerDistricts.size, dynamicQuests.length,
     districts.length, npcs.length, npcRelationships.size,
-    recentMatches.length, reputation,
+    recentMatches.length, _reputation,
   ]);
 }

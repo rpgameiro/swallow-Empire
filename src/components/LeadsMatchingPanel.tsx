@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Users, Plus, Zap, Star, TrendingUp, MapPin, Building2, DollarSign,
   ChevronDown, ChevronUp, X, Check, RefreshCw, Crown, Flame,
-  Briefcase, ArrowRight, AlertTriangle, Clock, Eye, EyeOff,
+  ArrowRight, AlertTriangle,
   UserCheck, UserPlus, Filter,
 } from 'lucide-react';
 import {
@@ -894,7 +894,6 @@ export function LeadsMatchingPanel({
   );
 
   const legendaryCount      = matches.filter(m => m.match_tier === 'legendary').length;
-  const strongCount         = matches.filter(m => m.match_tier === 'strong').length;
   const budgetMismatchCount = matches.filter(m => m.match_tier === 'budget_mismatch').length;
   const incompleteCount     = matches.filter(m => m.match_tier === 'incomplete_data').length;
 

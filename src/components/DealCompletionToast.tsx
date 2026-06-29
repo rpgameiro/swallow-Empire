@@ -7,26 +7,6 @@ interface Props {
   onDismiss: () => void;
 }
 
-// A floating reward chip that flies up and fades
-function FloatingChip({
-  label, color, delay,
-}: { label: string; color: string; delay: number }) {
-  return (
-    <span
-      className="absolute left-1/2 -translate-x-1/2 text-xs font-black px-2 py-0.5 rounded-full whitespace-nowrap"
-      style={{
-        color,
-        backgroundColor: color + '20',
-        border: `1px solid ${color}40`,
-        bottom: '0',
-        animation: `floatChip 1.4s ease-out ${delay}s both`,
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
 // Particle burst around the icon
 function ParticleBurst({ color }: { color: string }) {
   const particles = Array.from({ length: 8 }, (_, i) => {

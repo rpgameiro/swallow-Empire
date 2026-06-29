@@ -6,7 +6,7 @@ import {
   statusColor, statusLabel, NPC_TYPE_LABELS, NPC_TYPE_COLORS, PERSONALITY_LABELS,
 } from '../services/npcService';
 import {
-  X, TrendingUp, TrendingDown, DollarSign, Star, ChevronRight,
+  X, TrendingUp, Star, ChevronRight,
   MessageCircle, Shield, Brain, Users, AlertTriangle, CheckCircle2, Lock,
 } from 'lucide-react';
 

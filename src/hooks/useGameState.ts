@@ -9,7 +9,7 @@ import {
   getOrCreateReputation, updateReputation, getOfficialQuests,
 } from '../services/supabase';
 import {
-  DynamicQuest, getDynamicQuests, completeDynamicQuest, insertDynamicQuests,
+  DynamicQuest, getDynamicQuests, completeDynamicQuest,
   refreshDailyQuests, refreshWeeklyQuests, ensureMainQuests, ensureLegendaryQuests,
 } from '../services/questEngine';
 import {
@@ -27,7 +27,7 @@ import { acceptMission, dismissAISuggestion, snoozeSuggestion } from '../service
 import { AISuggestion } from '../types/game';
 import {
   NPC, PlayerNPCRelationship, NPCDialogueChoice, ActiveNPCDialogue,
-  RivalFirm, RivalDistrictPresence, RivalEvent,
+  RivalDistrictPresence,
   PendingCinematicDeal, CinematicNegotiationRound, DealTier,
 } from '../types/game';
 
@@ -112,7 +112,7 @@ export const useGameState = () => {
         const existingAll = await getDynamicQuests(player.id);
         const ctx = { player, playerDistricts, districts, existingActive: existingAll };
 
-        const [dailies, weeklies, mains, legendaries] = await Promise.all([
+        const [, , ,] = await Promise.all([
           refreshDailyQuests(ctx),
           refreshWeeklyQuests(ctx),
           ensureMainQuests({ ...ctx, existingActive: existingAll }),
@@ -545,7 +545,7 @@ export const useGameState = () => {
     repEarned: number,
     xpEarned: number,
     dominanceGained: number,
-    level: number,
+    _level: number,
   ): PendingCinematicDeal => {
     const difficulty = district.base_difficulty;
     const tier: DealTier = difficulty >= 5 ? 'legendary' : difficulty >= 3 ? 'major' : 'standard';

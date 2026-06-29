@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Building2, Users, Megaphone, Landmark, CheckCircle2,
   Lock, TrendingUp, Star, Zap, DollarSign, ChevronRight,
@@ -277,10 +277,10 @@ export const OfficePanel = ({
   purchasedSlugs,
   playerMoney,
   playerLevel,
-  incomeMultiplier,
+  incomeMultiplier: _incomeMultiplier,
   onPurchase,
 }: OfficePanelProps) => {
-  const [justPurchasedSlug, setJustPurchasedSlug] = useState<string | null>(null);
+  const [_justPurchasedSlug, setJustPurchasedSlug] = useState<string | null>(null);
 
   // Only display the 4-upgrade chain
   const chainUpgrades = CHAIN_SLUGS

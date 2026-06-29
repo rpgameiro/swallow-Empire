@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { DynamicQuest, timeRemaining } from '../services/questEngine';
 import { District, OfficialQuest } from '../types/game';
-import { Clock, Zap, Star, ChevronDown, ChevronUp, RefreshCw, CheckCircle2, Shield, Crown, Flame, MapPin, TrendingUp, Lock, Briefcase, AlertCircle, ExternalLink, Archive, CreditCard as Edit3, MoreHorizontal } from 'lucide-react';
+import { Clock, Zap, ChevronDown, RefreshCw, CheckCircle2, Shield, Crown, Flame, MapPin, Briefcase, ExternalLink, Archive, CreditCard as Edit3, MoreHorizontal } from 'lucide-react';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -538,8 +538,8 @@ export const QuestPanel = ({
   dynamicQuests,
   officialQuests,
   districts,
-  playerLevel,
-  playerReputation,
+  playerLevel: _playerLevel,
+  playerReputation: _playerReputation,
   onComplete,
   onRefresh,
 }: QuestPanelProps) => {

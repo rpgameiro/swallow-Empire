@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   TrendingUp, Users, Building2, DollarSign, Zap, Crown,
-  AlertTriangle, ChevronUp, ChevronDown, Minus, MapPin,
-  Star, Flame, Activity, BarChart2, RefreshCw, Eye,
-  ArrowRight, ArrowUp, Shield, Target,
+  MapPin,
+  Flame, Activity, BarChart2, RefreshCw,
+  ArrowRight, Target,
 } from 'lucide-react';
-import { Lead, LeadMatch, MatchTier, MATCH_TIER_META, District, DistrictMarketData } from '../types/game';
+import { Lead, LeadMatch, MATCH_TIER_META, District, DistrictMarketData } from '../types/game';
 import { getLeads, getLeadMatches } from '../services/matchingEngine';
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
@@ -538,7 +538,7 @@ function OpportunityAlert({ entry, index, onClick }: { entry: DistrictHeatEntry;
 
 // ─── Ranking table row ────────────────────────────────────────────────────────
 
-function RankRow({ entry, rank, prev, onClick }: {
+function RankRow({ entry, rank, prev: _prev, onClick }: {
   entry: DistrictHeatEntry;
   rank: number;
   prev: DistrictHeatEntry | undefined;
@@ -546,7 +546,6 @@ function RankRow({ entry, rank, prev, onClick }: {
 }) {
   const color = scoreColor(entry.opportunityScore);
   const regionColor = REGION_COLORS[entry.region] ?? '#475569';
-  const rankMoved = prev ? entry.opportunityScore - prev.opportunityScore : 0;
 
   return (
     <button
@@ -648,10 +647,8 @@ export function DistrictHeatmap({
   }, [entries, sortBy]);
 
   const hotZones    = sorted.filter(e => e.opportunityScore >= 65);
-  const totalLeads  = leads.length;
   const totalVal    = entries.reduce((s, e) => s + e.totalValue, 0);
   const totalMatch  = matches.filter(m => !m.is_dismissed).length;
-  const topScore    = sorted[0]?.opportunityScore ?? 0;
 
   const alerts = sorted.filter(e => e.legendaryMatches > 0 || e.opportunityScore >= 50);
 

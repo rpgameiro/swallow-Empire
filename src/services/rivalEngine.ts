@@ -230,7 +230,7 @@ const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 // Called every few minutes from useGameState. Decides if any rivals act.
 
 export const tickRivals = async (ctx: RivalContext): Promise<RivalEvent[]> => {
-  const { player, playerDistricts, districts, rivals, rivalPresence, existingEvents } = ctx;
+  const { player, rivals, rivalPresence, existingEvents } = ctx;
   const newEvents: RivalEvent[] = [];
 
   // Only generate at most 2 rival events per tick to avoid flooding

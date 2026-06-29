@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import {
   BarChart2, TrendingUp, Map, Activity, Layers, Star,
   Flame, Shield, Eye, ChevronUp, ChevronDown, Minus,
-  DollarSign, Building2, Target, Zap, Crown, Users,
-  AlertTriangle, Globe, Briefcase,
+  DollarSign, Building2, Target, Zap, Crown,
+  AlertTriangle, Globe,
 } from 'lucide-react';
 import {
   Player, PlayerDistrict, District, DistrictMarketData,
@@ -365,7 +365,7 @@ function RadarChart({
   });
 
   const dataFraction = stats.map(s => (s.value / (s.max ?? 100)));
-  const dataPts = stats.map((s, i) => {
+  const dataPts = stats.map((_s, i) => {
     const a = angle(i);
     const f = Math.min(dataFraction[i], 1);
     return [cx + Math.cos(a) * r * f, cy + Math.sin(a) * r * f];
@@ -499,7 +499,7 @@ const SECTIONS: { key: DashSection; label: string; icon: React.ElementType; colo
 
 // ─── Empire section ───────────────────────────────────────────────────────────
 
-function EmpireSection({ player, playerDistricts, districts, dynamicQuests }: {
+function EmpireSection({ player, playerDistricts, districts: _districts, dynamicQuests }: {
   player: Player;
   playerDistricts: Map<string, PlayerDistrict>;
   districts: District[];
@@ -509,12 +509,9 @@ function EmpireSection({ player, playerDistricts, districts, dynamicQuests }: {
   const totalMarketShare = Array.from(playerDistricts.values()).reduce((s, d) => s + d.market_share, 0);
   const avgMarketShare = playerDistricts.size > 0 ? (totalMarketShare / playerDistricts.size) * 100 : 0;
   const completedQuests = dynamicQuests.filter(q => q.status === 'completed').length;
-  const totalXpFromQuests = dynamicQuests.filter(q => q.status === 'completed').reduce((s, q) => s + q.xp_reward, 0);
 
   // Simulated empire growth curve (approximated from current data)
-  const growthBase = player.total_xp / 1000;
   const growthCurve = Array.from({ length: 12 }, (_, i) => {
-    const factor = Math.pow(1 + growthBase * 0.1, i);
     return Math.min(player.empire_value * (0.3 + (i / 11) * 0.7) * (0.8 + Math.random() * 0.4) * (i === 11 ? 1 : 0.85), player.empire_value);
   });
   growthCurve[11] = player.empire_value;
@@ -814,14 +811,12 @@ function DistrictsSection({ districts, playerDistricts, districtMarket }: {
 
 // ─── Pipeline section ─────────────────────────────────────────────────────────
 
-function PipelineSection({ dynamicQuests, player }: { dynamicQuests: DynamicQuest[]; player: Player }) {
+function PipelineSection({ dynamicQuests, player: _player }: { dynamicQuests: DynamicQuest[]; player: Player }) {
   const active    = dynamicQuests.filter(q => q.status === 'active');
   const completed = dynamicQuests.filter(q => q.status === 'completed');
-  const expired   = dynamicQuests.filter(q => q.status === 'expired');
 
   const totalXP    = completed.reduce((s, q) => s + q.xp_reward, 0);
   const totalMoney = completed.reduce((s, q) => s + (q.money_reward ?? 0), 0);
-  const totalRep   = completed.reduce((s, q) => s + q.reputation_reward, 0);
 
   // Category breakdown
   const categories: Record<string, number> = {};
@@ -834,12 +829,6 @@ function PipelineSection({ dynamicQuests, player }: { dynamicQuests: DynamicQues
       value,
       color: [TERM_AMBER, TERM_CYAN, TERM_GREEN, TERM_BLUE, TERM_ORANGE, TERM_RED][i],
     }));
-
-  // Difficulty distribution
-  const diffDist = [1, 2, 3, 4, 5].map(d => ({
-    label: `D${d}`, color: heatColor(d * 20),
-    value: completed.filter(q => q.difficulty === d).length,
-  }));
 
   // Type breakdown
   const typeData = ['daily', 'weekly', 'main', 'legendary'].map((t, i) => ({
@@ -1150,7 +1139,7 @@ function RivalsSection({ rivals, rivalPresence, rivalEvents, districts, playerDi
 
 // ─── Reputation analytics section ────────────────────────────────────────────
 
-function ReputationSection({ reputation, player }: { reputation: PlayerReputation | null; player: Player }) {
+function ReputationSection({ reputation, player: _player }: { reputation: PlayerReputation | null; player: Player }) {
   if (!reputation) return (
     <div className="text-center py-8 text-slate-600 text-sm">No reputation data available</div>
   );
@@ -1205,7 +1194,6 @@ function ReputationSection({ reputation, player }: { reputation: PlayerReputatio
         <Panel title="Track Standings" subtitle="Current Score & Rank" icon={BarChart2} color={TERM_AMBER}>
           <div className="space-y-3">
             {trackData.map(d => {
-              const nextRank = d.rank.rank < 7 ? d.cur : d.cur;
               return (
                 <div key={d.track}>
                   <div className="flex items-center justify-between mb-1">
