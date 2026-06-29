@@ -1,0 +1,731 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Selection ──────────────────────────────────────────────────────────── */
+* {
+  @apply selection:bg-amber-600 selection:text-white;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-slate-950;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { @apply w-1.5; }
+::-webkit-scrollbar-track  { background: #0a0f1a; }
+::-webkit-scrollbar-thumb  { background: #92400e; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #d97706; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATMOSPHERE LAYER STACK (z-order: 997–999)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── RPG scanline overlay ────────────────────────────────────────────────── */
+.rpg-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.035) 2px,
+    rgba(0, 0, 0, 0.035) 4px
+  );
+}
+
+/* ── Moving scanline sweep ───────────────────────────────────────────────── */
+.rpg-scanline-sweep {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 996;
+  overflow: hidden;
+}
+
+.rpg-scanline-sweep::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to bottom, transparent, rgba(245,158,11,0.018), transparent);
+  animation: sweep-scanline 12s linear infinite;
+}
+
+@keyframes sweep-scanline {
+  0%   { top: -120px; }
+  100% { top: 100vh; }
+}
+
+/* ── Vignette ────────────────────────────────────────────────────────────── */
+.rpg-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 998;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    rgba(0, 0, 0, 0.65) 100%
+  );
+  animation: vignette-breathe 8s ease-in-out infinite;
+}
+
+@keyframes vignette-breathe {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 1; }
+}
+
+/* ── Noise texture ───────────────────────────────────────────────────────── */
+.rpg-noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 997;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  animation: noise-drift 20s steps(10) infinite;
+}
+
+@keyframes noise-drift {
+  0%   { background-position: 0px 0px; }
+  10%  { background-position: -5% -10%; }
+  20%  { background-position: -15% 5%; }
+  30%  { background-position: 7% -25%; }
+  40%  { background-position: 20% 10%; }
+  50%  { background-position: -25% 20%; }
+  60%  { background-position: 15% 35%; }
+  70%  { background-position: 0% 5%; }
+  80%  { background-position: 30% 10%; }
+  90%  { background-position: -10% 10%; }
+  100% { background-position: 0px 0px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AMBIENT LIGHT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Dynamic light orb ───────────────────────────────────────────────────── */
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.07;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* ── Deep space aurora ───────────────────────────────────────────────────── */
+.ambient-aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 120% 60% at 10% 80%, rgba(245,158,11,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 80%  80% at 90% 10%, rgba(14,165,233,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse 60%  40% at 50% 50%, rgba(249,115,22,0.025) 0%, transparent 60%);
+  animation: aurora-shift 30s ease-in-out infinite;
+}
+
+@keyframes aurora-shift {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  33%       { opacity: 0.7; transform: scale(1.02) translateY(-1%); }
+  66%       { opacity: 0.9; transform: scale(0.98) translateY(1%); }
+}
+
+/* ── Light ray ───────────────────────────────────────────────────────────── */
+.light-ray {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, rgba(245,158,11,0.12), transparent);
+  pointer-events: none;
+  transform-origin: top center;
+}
+
+/* ── Cinematic grid ──────────────────────────────────────────────────────── */
+.rpg-grid-floor {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(245,158,11,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, transparent 30%, black 80%);
+  animation: grid-pulse 6s ease-in-out infinite;
+}
+
+@keyframes grid-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RPG CARD SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── RPG card base ───────────────────────────────────────────────────────── */
+.rpg-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98));
+  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.rpg-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 50%);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.rpg-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 158, 11, 0.22);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(245, 158, 11, 0.08),
+    0 0 40px rgba(245, 158, 11, 0.04);
+}
+
+.rpg-card:hover::before {
+  opacity: 1.5;
+}
+
+/* ── RPG card — primary emphasis ─────────────────────────────────────────── */
+.rpg-card-prime {
+  background: linear-gradient(135deg, rgba(20,15,42,0.97), rgba(2,6,23,0.99));
+  border-color: rgba(245,158,11,0.12);
+}
+
+.rpg-card-prime:hover {
+  border-color: rgba(245,158,11,0.3);
+  box-shadow:
+    0 12px 40px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(245,158,11,0.14),
+    0 0 60px rgba(245,158,11,0.06);
+}
+
+/* ── Territory card hover shimmer ────────────────────────────────────────── */
+.territory-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.07) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.territory-shimmer:hover::after {
+  opacity: 1;
+  animation: shimmer 1.2s ease-out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HUD FRAME SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── HUD frame — 4-corner bracket decoration ─────────────────────────────── */
+.hud-frame {
+  position: relative;
+}
+
+.hud-frame::before,
+.hud-frame::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(245, 158, 11, 0.35);
+  border-style: solid;
+  transition: border-color 0.3s ease;
+  z-index: 1;
+}
+
+.hud-frame:hover::before,
+.hud-frame:hover::after {
+  border-color: rgba(245, 158, 11, 0.6);
+}
+
+.hud-frame::before {
+  top: 5px;
+  left: 5px;
+  border-width: 1.5px 0 0 1.5px;
+}
+
+.hud-frame::after {
+  bottom: 5px;
+  right: 5px;
+  border-width: 0 1.5px 1.5px 0;
+}
+
+/* Additional pseudo-corners via box decoration */
+.hud-frame-full {
+  position: relative;
+}
+
+.hud-frame-full::before {
+  content: '';
+  position: absolute;
+  top: 5px; left: 5px;
+  width: 14px; height: 14px;
+  border-top: 1.5px solid rgba(245,158,11,0.45);
+  border-left: 1.5px solid rgba(245,158,11,0.45);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hud-frame-full::after {
+  content: '';
+  position: absolute;
+  bottom: 5px; right: 5px;
+  width: 14px; height: 14px;
+  border-bottom: 1.5px solid rgba(245,158,11,0.45);
+  border-right: 1.5px solid rgba(245,158,11,0.45);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── HUD data row ─────────────────────────────────────────────────────────── */
+.hud-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-left: 2px solid rgba(245,158,11,0.2);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.hud-row:hover {
+  border-left-color: rgba(245,158,11,0.6);
+  background: rgba(245,158,11,0.03);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TERRITORY / DISTRICT GLOW SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 6px var(--glow),
+      0 0 12px var(--glow),
+      inset 0 0 8px rgba(0,0,0,0.5);
+  }
+  50%       {
+    box-shadow:
+      0 0 14px var(--glow),
+      0 0 28px var(--glow),
+      0 0 48px var(--glow-wide, var(--glow)),
+      inset 0 0 8px rgba(0,0,0,0.5);
+  }
+}
+
+.territory-active {
+  animation: glow-pulse 3.5s ease-in-out infinite;
+}
+
+/* ── Territory empire tier — legendary glow ──────────────────────────────── */
+@keyframes empire-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 16px rgba(239,68,68,0.5),
+      0 0 32px rgba(239,68,68,0.3),
+      0 0 64px rgba(239,68,68,0.15),
+      inset 0 0 12px rgba(0,0,0,0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 24px rgba(239,68,68,0.7),
+      0 0 48px rgba(239,68,68,0.4),
+      0 0 80px rgba(239,68,68,0.2),
+      inset 0 0 12px rgba(0,0,0,0.6);
+  }
+}
+
+.territory-empire {
+  animation: empire-glow 2.5s ease-in-out infinite;
+}
+
+/* ── Territory discovery flash ───────────────────────────────────────────── */
+@keyframes discovery-flash {
+  0%   { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
+.discovery-flash {
+  position: absolute;
+  inset: -4px;
+  border-radius: 1rem;
+  background: radial-gradient(circle, rgba(245,158,11,0.65), transparent 70%);
+  animation: discovery-flash 1.3s ease-out forwards;
+  pointer-events: none;
+}
+
+/* ── District scan ring (new territory entering) ─────────────────────────── */
+@keyframes scan-ring {
+  0%   { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.scan-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  border: 2px solid currentColor;
+  animation: scan-ring 1.2s ease-out forwards;
+  pointer-events: none;
+}
+
+/* ── Fog of war ──────────────────────────────────────────────────────────── */
+.fog-of-war {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 30%, rgba(2, 6, 23, 0.82) 100%);
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAV / TAB SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tab underline slide ─────────────────────────────────────────────────── */
+.tab-active-indicator {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #f59e0b, #f97316, transparent);
+  border-radius: 2px 2px 0 0;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Navbar bottom accent pulse ──────────────────────────────────────────── */
+@keyframes nav-line-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+.nav-line-pulse {
+  animation: nav-line-pulse 4s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROGRESS / XP BARS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── XP bar shimmer ──────────────────────────────────────────────────────── */
+.xp-bar-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f59e0b 0%,
+    #f97316 35%,
+    #fbbf24 55%,
+    #f97316 75%,
+    #f59e0b 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.2s linear infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Particle burst placeholder ──────────────────────────────────────────── */
+@keyframes particle-fly {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  animation: particle-fly 0.8s ease-out forwards;
+}
+
+/* ── Floating XP number pop ──────────────────────────────────────────────── */
+@keyframes xp-pop {
+  0%   { transform: translateY(0) scale(1); opacity: 1; }
+  70%  { transform: translateY(-32px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-48px) scale(0.8); opacity: 0; }
+}
+
+.xp-pop {
+  position: absolute;
+  animation: xp-pop 1.4s cubic-bezier(0.22,1,0.36,1) forwards;
+  pointer-events: none;
+  font-weight: 900;
+  font-size: 0.75rem;
+  color: #fbbf24;
+  text-shadow: 0 0 8px rgba(245,158,11,0.8);
+}
+
+/* ── Money pop ───────────────────────────────────────────────────────────── */
+.money-pop {
+  position: absolute;
+  animation: xp-pop 1.4s cubic-bezier(0.22,1,0.36,1) forwards;
+  pointer-events: none;
+  font-weight: 900;
+  font-size: 0.75rem;
+  color: #10b981;
+  text-shadow: 0 0 8px rgba(16,185,129,0.8);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CINEMATIC TRANSITIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tab content swap ────────────────────────────────────────────────────── */
+@keyframes tab-enter {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.99); filter: blur(2px); }
+  100% { opacity: 1; transform: translateY(0) scale(1);      filter: blur(0); }
+}
+
+@keyframes tab-exit {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(0.99); }
+}
+
+.tab-enter {
+  animation: tab-enter 0.22s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.tab-exit {
+  animation: tab-exit 0.15s ease-in both;
+}
+
+/* ── Modal cinematic backdrop ────────────────────────────────────────────── */
+@keyframes modal-backdrop-in {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to   { opacity: 1; backdrop-filter: blur(8px); }
+}
+
+@keyframes modal-card-in {
+  from { transform: translateY(28px) scale(0.96); opacity: 0; filter: blur(4px); }
+  to   { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+}
+
+.modal-backdrop-enter {
+  animation: modal-backdrop-in 0.3s ease both;
+}
+
+.modal-card-enter {
+  animation: modal-card-in 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* ── Page reveal ─────────────────────────────────────────────────────────── */
+@keyframes page-reveal {
+  0%   { opacity: 0; filter: brightness(0.3) blur(8px); }
+  30%  { opacity: 0.6; filter: brightness(0.7) blur(2px); }
+  100% { opacity: 1; filter: brightness(1) blur(0); }
+}
+
+.page-reveal {
+  animation: page-reveal 1.2s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TEXT EFFECTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.text-glow-amber {
+  text-shadow:
+    0 0 16px rgba(245, 158, 11, 0.55),
+    0 0 32px rgba(245, 158, 11, 0.25),
+    0 0 64px rgba(245, 158, 11, 0.1);
+}
+
+.text-glow-red {
+  text-shadow:
+    0 0 16px rgba(239, 68, 68, 0.65),
+    0 0 32px rgba(239, 68, 68, 0.3);
+}
+
+.text-glow-cyan {
+  text-shadow:
+    0 0 16px rgba(6, 182, 212, 0.55),
+    0 0 32px rgba(6, 182, 212, 0.25);
+}
+
+.text-glow-green {
+  text-shadow:
+    0 0 16px rgba(16, 185, 129, 0.55),
+    0 0 32px rgba(16, 185, 129, 0.25);
+}
+
+/* ── Animated text gradient ─────────────────────────────────────────────── */
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.text-gradient-animate {
+  background: linear-gradient(90deg, #f59e0b, #f97316, #fbbf24, #f59e0b);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Sound placeholder visualizer ───────────────────────────────────────── */
+@keyframes sound-bar {
+  0%, 100% { transform: scaleY(0.3); }
+  50%       { transform: scaleY(1); }
+}
+
+.sound-bar-1 { animation: sound-bar 0.6s ease-in-out infinite; animation-delay: 0s; }
+.sound-bar-2 { animation: sound-bar 0.6s ease-in-out infinite; animation-delay: 0.15s; }
+.sound-bar-3 { animation: sound-bar 0.6s ease-in-out infinite; animation-delay: 0.3s; }
+
+/* ── Hover sound ring (visual indicator, no audio) ───────────────────────── */
+@keyframes hover-ring {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.hover-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 1px solid rgba(245,158,11,0.4);
+  animation: hover-ring 0.4s ease-out both;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STAGGER DELAYS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.stagger-1  { animation-delay: 0.05s; }
+.stagger-2  { animation-delay: 0.10s; }
+.stagger-3  { animation-delay: 0.15s; }
+.stagger-4  { animation-delay: 0.20s; }
+.stagger-5  { animation-delay: 0.25s; }
+.stagger-6  { animation-delay: 0.30s; }
+.stagger-7  { animation-delay: 0.35s; }
+.stagger-8  { animation-delay: 0.40s; }
+.stagger-9  { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.50s; }
+.stagger-11 { animation-delay: 0.55s; }
+.stagger-12 { animation-delay: 0.60s; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RPG INTERACTIVE ELEMENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Button press feedback ───────────────────────────────────────────────── */
+@keyframes btn-press {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.btn-press:active {
+  animation: btn-press 0.15s ease-out;
+}
+
+/* ── Stat bar with inner track ───────────────────────────────────────────── */
+.stat-track {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+/* ── Pulsing dot indicator ───────────────────────────────────────────────── */
+@keyframes dot-alert {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.7; }
+}
+
+.dot-alert {
+  animation: dot-alert 1.2s ease-in-out infinite;
+}
+
+/* ── Cinematic letterbox bars ────────────────────────────────────────────── */
+@keyframes letterbox-in {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+.letterbox-top,
+.letterbox-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 3px;
+  pointer-events: none;
+  z-index: 995;
+  animation: letterbox-in 1.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.letterbox-top {
+  top: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(245,158,11,0.5) 20%,
+    rgba(249,115,22,0.7) 50%,
+    rgba(245,158,11,0.5) 80%,
+    transparent 100%
+  );
+}
+
+.letterbox-bottom {
+  bottom: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(14,165,233,0.3) 30%,
+    rgba(6,182,212,0.4) 50%,
+    rgba(14,165,233,0.3) 70%,
+    transparent 100%
+  );
+}
+
+/* ── Navbar glassmorphism ────────────────────────────────────────────────── */
+.navbar-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(2,6,23,0.92) 0%,
+    rgba(2,6,23,0.85) 100%
+  );
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    0 1px 0 rgba(245,158,11,0.12),
+    0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* ── Focus ring — RPG style ──────────────────────────────────────────────── */
+*:focus-visible {
+  outline: 1.5px solid rgba(245,158,11,0.6);
+  outline-offset: 2px;
+}
