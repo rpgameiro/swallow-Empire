@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus, Search, X, Star, Building2, DollarSign, MapPin, Globe,
   CreditCard as Edit2, Trash2, Phone, Mail, Calendar, ChevronDown,
@@ -220,6 +220,7 @@ function LeadDrawer({
     lead ? leadToForm(lead) : BLANK_FORM
   );
   const [formError, setFormError] = useState<string | null>(null);
+  const nextFollowUpRef = useRef<HTMLInputElement>(null);
 
   const f = <K extends keyof CRMFormData>(k: K, v: CRMFormData[K]) => {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -234,6 +235,8 @@ function LeadDrawer({
     const needsFollowUp = form.status === 'active' || form.status === 'matched';
     if (needsFollowUp && !form.next_follow_up) {
       setFormError('Next Follow-Up is required for active and matched leads.');
+      nextFollowUpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      nextFollowUpRef.current?.focus();
       return;
     }
     setFormError(null);
@@ -410,6 +413,7 @@ function LeadDrawer({
                 )}
               </label>
               <input
+                ref={nextFollowUpRef}
                 className="crm-input"
                 type="date"
                 value={form.next_follow_up}
