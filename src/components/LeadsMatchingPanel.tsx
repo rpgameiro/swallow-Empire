@@ -716,11 +716,15 @@ export function LeadsMatchingPanel({
 
   const load = useCallback(async () => {
     setLoading(true);
-    // Always fetch matches; always fetch localLeads as fallback
-    const [ls, ms] = await Promise.all([getLeads(playerId), getLeadMatches(playerId)]);
-    setLocalLeads(ls);
-    setMatches(ms);
-    setLoading(false);
+    try {
+      const [ls, ms] = await Promise.all([getLeads(playerId), getLeadMatches(playerId)]);
+      setLocalLeads(ls);
+      setMatches(ms);
+    } catch (err) {
+      console.error('[LeadsMatchingPanel] Failed to load leads or matches from Supabase:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [playerId]);
 
   useEffect(() => { load(); }, [load]);

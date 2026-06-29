@@ -112,7 +112,20 @@ function App() {
   const [leads, setLeads] = useState<Lead[]>(() => {
     try {
       const stored = localStorage.getItem('swallow_leads');
-      return stored ? (JSON.parse(stored) as Lead[]) : [];
+      if (!stored) return [];
+      const parsed = JSON.parse(stored) as Partial<Lead>[];
+      // Normalize old leads that predate bidirectional sync fields
+      return parsed.map(l => ({
+        notion_page_id:        l.notion_page_id        ?? null,
+        stars:                 l.stars                 ?? 0,
+        rooms:                 l.rooms                 ?? null,
+        last_contact_at:       l.last_contact_at       ?? null,
+        next_follow_up:        l.next_follow_up        ?? null,
+        status_updated_at:     l.status_updated_at     ?? null,
+        notion_last_synced_at: l.notion_last_synced_at ?? null,
+        bolt_last_updated_at:  l.bolt_last_updated_at  ?? null,
+        ...l,
+      } as Lead));
     } catch { return []; }
   });
   const appRef = useRef<HTMLDivElement>(null);

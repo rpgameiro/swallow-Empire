@@ -296,7 +296,10 @@ export const getLeads = async (playerId: string): Promise<Lead[]> => {
     .select('*')
     .eq('player_id', playerId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) {
+    console.error('[matchingEngine] getLeads failed:', error);
+    throw error;
+  }
   return data ?? [];
 };
 
