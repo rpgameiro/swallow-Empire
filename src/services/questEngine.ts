@@ -285,6 +285,8 @@ export function generateDailyQuests(ctx: QuestGeneratorContext): Omit<DynamicQue
       expires_at: expiry,
       completed_at: null,
       generation_context: { level: player.level, rep: player.reputation, seed },
+      source: null,
+      accepted_at: null,
     });
   }
 
@@ -334,6 +336,8 @@ export function generateWeeklyQuests(ctx: QuestGeneratorContext): Omit<DynamicQu
       expires_at: expiry,
       completed_at: null,
       generation_context: { level: player.level, rep: player.reputation, weekNum },
+      source: null,
+      accepted_at: null,
     });
   }
 
@@ -374,6 +378,8 @@ export function generateMainQuests(ctx: QuestGeneratorContext): Omit<DynamicQues
       expires_at: null,
       completed_at: null,
       generation_context: { level: player.level, storyIndex: i },
+      source: null,
+      accepted_at: null,
     });
   });
 
@@ -408,6 +414,8 @@ export function generateLegendaryQuests(ctx: QuestGeneratorContext): Omit<Dynami
       expires_at: null,
       completed_at: null,
       generation_context: { level: player.level, rep: player.reputation },
+      source: null,
+      accepted_at: null,
     }));
 }
 
@@ -510,18 +518,22 @@ const MATCH_QUEST_STEPS: MatchQuestTemplate[] = [
 
 // Tier base rewards that step multipliers scale from
 const TIER_BASE: Record<MatchTier, { xp: number; money: number; rep: number }> = {
-  legendary: { xp: 800,  money: 50000, rep: 30 },
-  strong:    { xp: 350,  money: 20000, rep: 15 },
-  warm:      { xp: 150,  money: 8000,  rep: 6  },
-  low:       { xp: 50,   money: 2000,  rep: 2  },
+  legendary:       { xp: 800,  money: 50000, rep: 30 },
+  strong:          { xp: 350,  money: 20000, rep: 15 },
+  warm:            { xp: 150,  money: 8000,  rep: 6  },
+  low:             { xp: 50,   money: 2000,  rep: 2  },
+  budget_mismatch: { xp: 0,    money: 0,     rep: 0  },
+  incomplete_data: { xp: 0,    money: 0,     rep: 0  },
 };
 
 // Steps generated per tier (higher tiers unlock more steps)
 const TIER_STEP_COUNT: Record<MatchTier, number> = {
-  legendary: 5,
-  strong:    4,
-  warm:      2,
-  low:       1,
+  legendary:       5,
+  strong:          4,
+  warm:            2,
+  low:             1,
+  budget_mismatch: 0,
+  incomplete_data: 0,
 };
 
 export function generateMatchQuests(ctx: MatchQuestContext): Omit<DynamicQuest, 'id' | 'generated_at'>[] {
@@ -564,6 +576,8 @@ export function generateMatchQuests(ctx: MatchQuestContext): Omit<DynamicQuest, 
         match_score:  ctx.matchScore,
         step_index:   idx,
       },
+      source: null,
+      accepted_at: null,
     };
   });
 }

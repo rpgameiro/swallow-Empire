@@ -293,7 +293,7 @@ function AnimBar({ label, value, max, color, sub, index = 0, rightLabel }: {
 
 function TierBadge({ tier }: { tier: MatchTier }) {
   const m = MATCH_TIER_META[tier];
-  const icons: Record<MatchTier, typeof Crown> = { legendary: Crown, strong: Flame, warm: Star, low: Target };
+  const icons: Record<MatchTier, typeof Crown> = { legendary: Crown, strong: Flame, warm: Star, low: Target, budget_mismatch: Shield, incomplete_data: Shield };
   const Icon = icons[tier];
   return (
     <span
@@ -407,10 +407,12 @@ function computeAnalytics(leads: Lead[], matches: LeadMatch[]): Analytics {
 
   // Tier distribution percentages
   const tierPcts: Record<MatchTier, number> = {
-    legendary: total > 0 ? (legendary / total) * 100 : 0,
-    strong:    total > 0 ? (strong / total)    * 100 : 0,
-    warm:      total > 0 ? (warm / total)      * 100 : 0,
-    low:       total > 0 ? (low / total)       * 100 : 0,
+    legendary:       total > 0 ? (legendary / total) * 100 : 0,
+    strong:          total > 0 ? (strong / total)    * 100 : 0,
+    warm:            total > 0 ? (warm / total)      * 100 : 0,
+    low:             total > 0 ? (low / total)       * 100 : 0,
+    budget_mismatch: 0,
+    incomplete_data: 0,
   };
 
   // Top 5 districts
@@ -448,7 +450,7 @@ function computeAnalytics(leads: Lead[], matches: LeadMatch[]): Analytics {
     const s = invStats.get(inv.id)!;
     s.matchCount++;
     s.totalScore += m.match_score;
-    const tierRank: Record<MatchTier, number> = { legendary: 4, strong: 3, warm: 2, low: 1 };
+    const tierRank: Record<MatchTier, number> = { legendary: 4, strong: 3, warm: 2, low: 1, budget_mismatch: 0, incomplete_data: 0 };
     if (tierRank[m.match_tier] > tierRank[s.topTier]) s.topTier = m.match_tier;
     const own = ownerById.get(m.owner_lead_id);
     s.totalValue += own?.estimated_value || 0;

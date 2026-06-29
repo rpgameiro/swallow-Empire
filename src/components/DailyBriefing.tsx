@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import {
   Player, PlayerDistrict, District, NPC,
-  PlayerNPCRelationship, ReputationState,
+  PlayerNPCRelationship, PlayerReputation,
   xpRequiredForLevel,
 } from '../types/game';
 import { DynamicQuest } from '../services/questEngine';
@@ -103,7 +103,7 @@ export function generateDailyBriefing(
   npcs: NPC[],
   npcRelationships: Map<string, PlayerNPCRelationship>,
   recentMatches: ComputedMatch[],
-  reputation: ReputationState | null,
+  reputation: PlayerReputation | null,
 ): DailyBriefingData {
   const now = new Date().toISOString();
 
@@ -843,7 +843,7 @@ export function useDailyBriefing(
   npcs: NPC[],
   npcRelationships: Map<string, PlayerNPCRelationship>,
   recentMatches: ComputedMatch[],
-  reputation: ReputationState | null,
+  reputation: PlayerReputation | null,
 ): DailyBriefingData | null {
   return useMemo(() => {
     if (!player) return null;

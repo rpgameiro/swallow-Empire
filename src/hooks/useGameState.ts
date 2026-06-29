@@ -55,6 +55,7 @@ const initial: GameState = {
   achievements: [], unlockedAchievements: new Set(),
   levelRewards: new Map(), pendingLevelUps: [], pendingQuestCompletions: [],
   pendingDealCompletions: [],
+  pendingCinematicDeal: null,
   npcs: [],
   npcRelationships: new Map(),
   activeNPCDialogue: null,

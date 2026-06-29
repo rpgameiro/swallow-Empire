@@ -1,4 +1,4 @@
-import { StoryEventTemplate } from '../types/game';
+import { StoryEventTemplate, ActiveStoryEvent } from '../types/game';
 
 // ─── Story event template pool ────────────────────────────────────────────────
 
@@ -453,8 +453,6 @@ export const STORY_TEMPLATES: StoryEventTemplate[] = [
 ];
 
 // ─── Spawn logic ──────────────────────────────────────────────────────────────
-
-import { ActiveStoryEvent, StoryEventTemplate } from '../types/game';
 
 let lastSpawnTimes: Record<string, number> = {};
 
