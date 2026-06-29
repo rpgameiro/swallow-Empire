@@ -1327,7 +1327,7 @@ export function LeadsMatchingPanel({
                 <div className="rounded-xl border border-slate-800/50 bg-slate-900/30 px-5 py-6 text-center space-y-1.5">
                   <p className="text-slate-500 text-sm font-bold">No commercial matches yet</p>
                   <p className="text-slate-700 text-xs leading-relaxed max-w-xs mx-auto">
-                    Warm, strong, and legendary matches require compatible asset types, overlapping locations, and budget alignment.
+                    Warm, strong, and legendary matches require overlapping locations and budget alignment. Asset type is informational only.
                     Review the diagnostics below to improve your lead data.
                   </p>
                 </div>
