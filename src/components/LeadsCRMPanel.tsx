@@ -858,16 +858,24 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [logContactLead, setLogContactLead] = useState<Lead | null>(null);
   const [logContactSaving, setLogContactSaving] = useState(false);
+  const [localLeadsLoaded, setLocalLeadsLoaded] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
-  const leads = (externalLeads && externalLeads.length > 0) ? externalLeads : localLeads;
+  // After first successful getLeads(), localLeads is authoritative (even if []).
+  // Before that, fall back to externalLeads as a seed so Notion-synced leads
+  // appear immediately without waiting for the DB round-trip.
+  const leads = localLeadsLoaded ? localLeads : (externalLeads ?? []);
 
   const refresh = useCallback(async () => {
     try {
       const fresh = await getLeads(playerId);
       setLocalLeads(fresh);
+      setLocalLeadsLoaded(true);
+      setRefreshError(null);
       onLeadsSync(fresh);
     } catch (err) {
       console.error('[LeadsCRMPanel] refresh failed:', err);
+      setRefreshError('Lead saved, but reload failed. Refresh the page to see latest leads.');
     }
   }, [playerId, onLeadsSync]);
 
@@ -879,13 +887,10 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
     })();
   }, [refresh]);
 
-  useEffect(() => {
-    if (externalLeads && externalLeads.length > 0) setLoading(false);
-  }, [externalLeads]);
-
   const handleSave = useCallback(async (form: CRMFormData) => {
     setSaving(true);
     setSaveError(null);
+    setRefreshError(null);
     try {
       const now = new Date().toISOString();
       const payload: Omit<Lead, 'id' | 'player_id' | 'created_at' | 'updated_at'> = {
@@ -994,6 +999,20 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
   return (
     <div className="space-y-4">
       <style>{CRM_CSS}</style>
+
+      {/* Refresh error banner */}
+      {refreshError && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-3">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-300 flex-1">{refreshError}</p>
+          <button
+            onClick={() => setRefreshError(null)}
+            className="text-red-600 hover:text-red-400 transition-colors flex-shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Drawer */}
       {drawerOpen && (
