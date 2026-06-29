@@ -46,8 +46,10 @@ function fmtMoney(n: number): string {
 
 function parseEuro(s: string): number {
   if (!s.trim()) return 0;
-  const clean = s.replace(/[€,\s]/g, '').replace(/k$/i, '000').replace(/m$/i, '000000');
-  return parseInt(clean, 10) || 0;
+  const clean = s.replace(/[€,\s]/g, '').toUpperCase().trim();
+  if (clean.endsWith('M')) return Math.round(parseFloat(clean) * 1_000_000) || 0;
+  if (clean.endsWith('K')) return Math.round(parseFloat(clean) * 1_000) || 0;
+  return Math.round(parseFloat(clean)) || 0;
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
@@ -174,11 +176,13 @@ function LeadDrawer({
   onSave,
   onCancel,
   saving,
+  saveError,
 }: {
   lead: Lead | null;
   onSave: (form: CRMFormData) => void;
   onCancel: () => void;
   saving: boolean;
+  saveError: string | null;
 }) {
   const [form, setForm] = useState<CRMFormData>(() =>
     lead ? leadToForm(lead) : BLANK_FORM
@@ -414,7 +418,13 @@ function LeadDrawer({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-2 px-5 py-4 border-t border-slate-800/60 flex-shrink-0">
+        <div className="flex flex-col gap-2 px-5 py-4 border-t border-slate-800/60 flex-shrink-0">
+          {saveError && (
+            <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 break-words">
+              {saveError}
+            </p>
+          )}
+          <div className="flex gap-2">
           <button
             onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-slate-800 hover:border-slate-600 text-slate-500 hover:text-slate-300 transition-all"
@@ -429,6 +439,7 @@ function LeadDrawer({
           >
             {saving ? 'Saving…' : 'Save Lead'}
           </button>
+          </div>
         </div>
       </div>
     </>
@@ -604,6 +615,7 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState<'all' | LeadTipo>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | LeadStatus>('all');
@@ -618,7 +630,11 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
     try {
       const fresh = await getLeads(playerId);
       setLocalLeads(fresh);
-      onLeadsSync(fresh);
+      // Only propagate to App state if we got results; avoids wiping externalLeads
+      // on permission errors that return an empty set rather than throwing.
+      if (fresh.length > 0) {
+        onLeadsSync(fresh);
+      }
     } catch (err) {
       console.error('[LeadsCRMPanel] refresh failed:', err);
     }
@@ -638,6 +654,7 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
 
   const handleSave = useCallback(async (form: CRMFormData) => {
     setSaving(true);
+    setSaveError(null);
     try {
       const now = new Date().toISOString();
       const payload: Omit<Lead, 'id' | 'player_id' | 'created_at' | 'updated_at'> = {
@@ -674,6 +691,10 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
       setDrawerOpen(false);
       setEditingLead(null);
       await refresh();
+    } catch (err: unknown) {
+      const msg = (err as { message?: string }).message ?? 'Failed to save lead';
+      setSaveError(msg);
+      console.error('[LeadsCRMPanel] save failed:', err);
     } finally {
       setSaving(false);
     }
@@ -722,8 +743,9 @@ export function LeadsCRMPanel({ playerId, externalLeads, onLeadsSync }: LeadsCRM
         <LeadDrawer
           lead={editingLead}
           onSave={handleSave}
-          onCancel={() => { setDrawerOpen(false); setEditingLead(null); }}
+          onCancel={() => { setDrawerOpen(false); setEditingLead(null); setSaveError(null); }}
           saving={saving}
+          saveError={saveError}
         />
       )}
 
