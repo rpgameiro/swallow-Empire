@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Search, X, Star, Building2, DollarSign, MapPin, Globe,
   CreditCard as Edit2, Trash2, Phone, Mail, Calendar, ChevronDown,
@@ -219,12 +219,9 @@ function LeadDrawer({
   const [form, setForm] = useState<CRMFormData>(() =>
     lead ? leadToForm(lead) : BLANK_FORM
   );
-  const [formError, setFormError] = useState<string | null>(null);
-  const nextFollowUpRef = useRef<HTMLInputElement>(null);
 
   const f = <K extends keyof CRMFormData>(k: K, v: CRMFormData[K]) => {
     setForm(prev => ({ ...prev, [k]: v }));
-    if (k === 'next_follow_up' || k === 'status') setFormError(null);
   };
 
   const toggle = (arr: string[], val: string) =>
@@ -232,14 +229,6 @@ function LeadDrawer({
 
   const handleSaveClick = () => {
     if (!form.name.trim()) return;
-    const needsFollowUp = form.status === 'active' || form.status === 'matched';
-    if (needsFollowUp && !form.next_follow_up) {
-      setFormError('Next Follow-Up is required for active and matched leads.');
-      nextFollowUpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      nextFollowUpRef.current?.focus();
-      return;
-    }
-    setFormError(null);
     onSave(form);
   };
 
@@ -402,23 +391,15 @@ function LeadDrawer({
               <input className="crm-input" type="date" value={form.last_contact_at} onChange={e => f('last_contact_at', e.target.value)} />
             </div>
             <div>
-              <label
-                className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1"
-                style={{ color: formError && !form.next_follow_up ? '#f87171' : '#475569' }}
-              >
+              <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 Next Follow-Up
-                {(form.status === 'active' || form.status === 'matched') && (
-                  <span className="text-red-400 ml-0.5">*</span>
-                )}
               </label>
               <input
-                ref={nextFollowUpRef}
                 className="crm-input"
                 type="date"
                 value={form.next_follow_up}
                 onChange={e => f('next_follow_up', e.target.value)}
-                style={formError && !form.next_follow_up ? { borderColor: 'rgba(248,113,113,0.5)' } : {}}
               />
             </div>
           </div>
@@ -482,11 +463,6 @@ function LeadDrawer({
 
         {/* Footer */}
         <div className="flex flex-col gap-2 px-5 py-4 border-t border-slate-800/60 flex-shrink-0">
-          {formError && (
-            <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 break-words">
-              {formError}
-            </p>
-          )}
           {saveError && (
             <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 break-words">
               {saveError}
@@ -530,15 +506,8 @@ function LogContactPopover({
   const today = todayStr();
   const [lastContact, setLastContact] = useState(today);
   const [nextFollowUp, setNextFollowUp] = useState(() => dateInDays(7));
-  const [error, setError] = useState<string | null>(null);
-
-  const requiresFollowUp = lead.status === 'active' || lead.status === 'matched';
 
   const handleConfirm = () => {
-    if (requiresFollowUp && !nextFollowUp) {
-      setError('Next Follow-Up is required for active and matched leads.');
-      return;
-    }
     onConfirm(lastContact, nextFollowUp || null);
   };
 
@@ -582,34 +551,19 @@ function LogContactPopover({
               />
             </div>
             <div>
-              <label
-                className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1"
-                style={{ color: error ? '#f87171' : '#475569' }}
-              >
+              <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 Next Follow-Up
-                {requiresFollowUp && <span className="text-red-400">*</span>}
               </label>
               <input
                 className="crm-input"
                 type="date"
                 value={nextFollowUp}
-                onChange={e => { setNextFollowUp(e.target.value); setError(null); }}
-                style={error ? { borderColor: 'rgba(248,113,113,0.5)' } : {}}
+                onChange={e => setNextFollowUp(e.target.value)}
               />
-              {!requiresFollowUp && (
-                <p className="text-[10px] text-slate-600 mt-1">
-                  Optional — lead is {lead.status}.
-                </p>
-              )}
+              <p className="text-[10px] text-slate-600 mt-1">Optional.</p>
             </div>
           </div>
-
-          {error && (
-            <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
 
           <div className="flex gap-2">
             <button
