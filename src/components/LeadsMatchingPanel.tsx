@@ -754,6 +754,14 @@ export function LeadsMatchingPanel({
       source: form.source,
       notes: form.notes.trim() || null,
       status: 'active' as const,
+      notion_page_id: null,
+      stars: 0,
+      rooms: null,
+      last_contact_at: null,
+      next_follow_up: null,
+      status_updated_at: null,
+      notion_last_synced_at: null,
+      bolt_last_updated_at: null,
     };
 
     if (editingLead) {

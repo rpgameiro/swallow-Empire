@@ -5,10 +5,11 @@ import {
   ChevronDown, ChevronUp, Zap, Info,
 } from 'lucide-react';
 import {
-  testNotionConnection, diagnoseNotion, previewFromNotion,
+  testNotionConnection, diagnoseNotion, syncFromNotion,
   getDatabaseId, setDatabaseId,
   NotionDiagnoseResult, NotionDiagnoseRow,
 } from '../services/notionService';
+import { getLeads } from '../services/matchingEngine';
 import type { Lead } from '../types/game';
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
@@ -347,46 +348,24 @@ export function NotionSettingsPanel({
     setSyncRes({ status: 'loading', message: '' });
 
     try {
-      const preview = await previewFromNotion(dbId.trim());
+      const result = await syncFromNotion(playerId);
 
-      if (preview.error) {
-        setSyncRes({ status: 'error', message: preview.error });
+      if (result.error) {
+        setSyncRes({ status: 'error', message: result.error });
         return;
       }
 
-      const now = new Date().toISOString();
-      const parsedLeads: Lead[] = preview.rows
-        .filter(r => r.tipo_mapped !== null)
-        .map(r => ({
-          id:              r.notion_page_id,
-          player_id:       playerId,
-          tipo:            r.tipo_mapped as Lead['tipo'],
-          name:            r.name || 'Unnamed',
-          company:         r.empresa || null,
-          email:           null,
-          phone:           null,
-          locations:       r.locations,
-          asset_types:     r.asset_types,
-          investment_min:  0,
-          investment_max:  r.valor_estimado > 0 ? r.valor_estimado : 0,
-          estimated_value: r.valor_estimado,
-          urgency:         'medium' as Lead['urgency'],
-          notes:           null,
-          source:          'inbound' as Lead['source'],
-          status:          'active' as Lead['status'],
-          created_at:      now,
-          updated_at:      now,
-        }));
-
-      onLeadsSync(parsedLeads);
+      const freshLeads = await getLeads(playerId);
+      onLeadsSync(freshLeads);
 
       setSyncRes({
         status: 'success',
-        message: `${parsedLeads.length} lead${parsedLeads.length !== 1 ? 's' : ''} synced`,
-        detail: `${preview.investors} investor${preview.investors !== 1 ? 's' : ''}, ${preview.owners} owner${preview.owners !== 1 ? 's' : ''}${preview.unknown > 0 ? `, ${preview.unknown} skipped (no valid Tipo)` : ''}.`,
-        count: parsedLeads.length,
+        message: `${result.synced} lead${result.synced !== 1 ? 's' : ''} synced`,
+        detail: result.message || `${result.synced} upserted, ${result.skipped} skipped.`,
+        count: result.synced,
       });
     } catch (e) {
+      console.error('[NotionSettingsPanel] handleSync error:', e);
       setSyncRes({ status: 'error', message: 'Unexpected error — check Notion connection and try again.' });
     } finally {
       setSyncing(false);

@@ -963,6 +963,7 @@ export type MatchTier = 'legendary' | 'strong' | 'warm' | 'low' | 'budget_mismat
 export interface Lead {
   id: string;
   player_id: string;
+  notion_page_id: string | null;
   tipo: LeadTipo;
   name: string;
   company: string | null;
@@ -977,6 +978,14 @@ export interface Lead {
   notes: string | null;
   source: LeadSource;
   status: LeadStatus;
+  // Extended fields from bidirectional sync
+  stars: number;
+  rooms: number | null;
+  last_contact_at: string | null;
+  next_follow_up: string | null;
+  status_updated_at: string | null;
+  notion_last_synced_at: string | null;
+  bolt_last_updated_at: string | null;
   created_at: string;
   updated_at: string;
 }
