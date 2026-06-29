@@ -3,7 +3,7 @@ import {
   Users, Plus, Zap, Star, TrendingUp, MapPin, Building2, DollarSign,
   ChevronDown, ChevronUp, X, Check, RefreshCw, Crown, Flame,
   ArrowRight, AlertTriangle,
-  UserCheck, UserPlus, Filter,
+  UserCheck, UserPlus, Filter, Info,
 } from 'lucide-react';
 import {
   Lead, LeadMatch, MatchTier, MATCH_TIER_META,
@@ -677,6 +677,221 @@ function CinematicMatchNotification({
   );
 }
 
+// ─── Diagnostic card (muted, no XP / quest language) ─────────────────────────
+
+function DiagnosticCard({
+  match,
+  index,
+}: {
+  match: ComputedMatch;
+  index: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isInvestor = (l: Lead) => l.tipo === 'Investidor';
+
+  const accentColor =
+    match.tier === 'budget_mismatch' ? '#f59e0b'
+    : match.tier === 'incomplete_data' ? '#475569'
+    : '#3b82f6'; // low
+
+  const headingLabel =
+    match.tier === 'budget_mismatch' ? 'Budget Gap'
+    : match.tier === 'incomplete_data' ? 'Missing Data'
+    : 'Weak Signal';
+
+  const headingNote =
+    match.tier === 'budget_mismatch'
+      ? 'Asset value exceeds investor budget. Review pricing or budget expectations.'
+    : match.tier === 'incomplete_data'
+      ? 'One or both leads are missing required fields. Complete them to unlock scoring.'
+    : 'Leads share a market segment but lack the overlap needed for a commercial match.';
+
+  return (
+    <div
+      className="rounded-xl border overflow-hidden transition-all"
+      style={{
+        borderColor: accentColor + '20',
+        backgroundColor: accentColor + '05',
+        animationDelay: `${index * 0.04}s`,
+      }}
+    >
+      {/* Main row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: accentColor + '15' }}
+        >
+          <span className="text-xs font-black" style={{ color: accentColor }}>
+            {match.score > 0 ? match.score : '—'}
+          </span>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-sm text-slate-300 truncate">{match.investor.name}</span>
+            <ArrowRight className="w-3 h-3 text-slate-700 flex-shrink-0" />
+            <span className="font-bold text-sm text-slate-300 truncate">{match.owner.name}</span>
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span
+              className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+              style={{ color: accentColor, backgroundColor: accentColor + '15' }}
+            >
+              {headingLabel}
+            </span>
+            {match.investor.locations.length > 0 && (
+              <span className="text-[10px] text-slate-700 flex items-center gap-0.5">
+                <MapPin className="w-2.5 h-2.5" />
+                {match.investor.locations.slice(0, 2).join(', ')}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="p-1.5 rounded-lg border border-slate-800 hover:border-slate-600 text-slate-600 hover:text-slate-400 transition-all flex-shrink-0"
+        >
+          {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div
+          className="border-t px-4 py-3 space-y-2.5"
+          style={{ borderColor: accentColor + '15' }}
+        >
+          {/* Guidance note */}
+          <div
+            className="flex items-start gap-2 rounded-lg px-3 py-2"
+            style={{ backgroundColor: accentColor + '0c', border: `1px solid ${accentColor}25` }}
+          >
+            <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+            <p className="text-[11px] leading-relaxed" style={{ color: accentColor + 'cc' }}>
+              {headingNote}
+            </p>
+          </div>
+
+          {/* Reasons / missing fields */}
+          <div>
+            <div className="text-[9px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+              {match.tier === 'incomplete_data' ? 'Missing Fields' : 'Signals'}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {match.reasons.map((r, i) => (
+                <span
+                  key={i}
+                  className="text-[10px] px-2 py-1 rounded-lg"
+                  style={{
+                    backgroundColor: accentColor + '0c',
+                    color: accentColor + 'aa',
+                    border: `1px solid ${accentColor}20`,
+                  }}
+                >
+                  {r}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Mini lead cards */}
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { lead: match.investor, tipo: 'Investidor' as const, color: '#3b82f6' },
+              { lead: match.owner,   tipo: 'Proprietário' as const, color: '#10b981' },
+            ].map(({ lead, tipo, color }) => (
+              <div
+                key={tipo}
+                className="rounded-lg p-2"
+                style={{ backgroundColor: color + '08', border: `1px solid ${color}18` }}
+              >
+                <div className="flex items-center gap-1 mb-1">
+                  {isInvestor(lead)
+                    ? <DollarSign className="w-2.5 h-2.5" style={{ color }} />
+                    : <Building2 className="w-2.5 h-2.5" style={{ color }} />
+                  }
+                  <span className="text-[9px] font-black uppercase tracking-wide" style={{ color }}>{tipo}</span>
+                </div>
+                <div className="text-[11px] font-bold text-slate-400 truncate">{lead.name}</div>
+                {lead.locations.length > 0 && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-2 h-2 text-slate-700" />
+                    <span className="text-[9px] text-slate-600">{lead.locations.slice(0, 2).join(', ')}</span>
+                  </div>
+                )}
+                {isInvestor(lead) && (lead.investment_max || lead.estimated_value) ? (
+                  <div className="text-[9px] text-slate-600 mt-0.5">
+                    Budget: {fmtMoney(lead.investment_max || lead.estimated_value)}
+                  </div>
+                ) : !isInvestor(lead) && lead.estimated_value ? (
+                  <div className="text-[9px] text-slate-600 mt-0.5">
+                    Value: {fmtMoney(lead.estimated_value)}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Collapsible diagnostic section ──────────────────────────────────────────
+
+function DiagnosticSection({
+  title,
+  description,
+  accentColor,
+  items,
+}: {
+  title: string;
+  description: string;
+  accentColor: string;
+  items: ComputedMatch[];
+}) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+
+  return (
+    <div
+      className="rounded-xl border overflow-hidden"
+      style={{ borderColor: accentColor + '20', backgroundColor: accentColor + '04' }}
+    >
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
+      >
+        <div className="flex items-center gap-2.5">
+          <span
+            className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+            style={{ color: accentColor, backgroundColor: accentColor + '18', border: `1px solid ${accentColor}30` }}
+          >
+            {items.length}
+          </span>
+          <span className="text-xs font-black" style={{ color: accentColor }}>{title}</span>
+          <span className="text-[10px] text-slate-600 hidden sm:inline">{description}</span>
+        </div>
+        <ChevronDown
+          className="w-3.5 h-3.5 transition-transform flex-shrink-0"
+          style={{ color: accentColor + '80', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 space-y-1.5 border-t" style={{ borderColor: accentColor + '15' }}>
+          <div className="pt-2.5 space-y-1.5">
+            {items.map((m, i) => (
+              <DiagnosticCard key={`${m.investor.id}_${m.owner.id}`} match={m} index={i} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Matching criteria ────────────────────────────────────────────────────────
 // Only these tiers represent real commercial opportunities and are persisted.
 // incomplete_data / budget_mismatch / low are diagnostics — computed but skipped.
@@ -725,6 +940,7 @@ export function LeadsMatchingPanel({
   const [filterTipo, setFilterTipo] = useState<'all' | LeadTipo>('all');
   const [filterTier, setFilterTier] = useState<FilterTier>('all');
   const [cinematic, setCinematic] = useState<{ match: ComputedMatch; investor: Lead; owner: Lead } | null>(null);
+  const [diagnostics, setDiagnostics] = useState<ComputedMatch[]>([]);
 
   // The authoritative leads list: externalLeads (global saved state) when non-empty, otherwise localLeads from DB
   const leads = (externalLeads && externalLeads.length > 0) ? externalLeads : localLeads;
@@ -839,6 +1055,7 @@ export function LeadsMatchingPanel({
 
       // Always record run stats so the UI reports diagnostics even when nothing saves
       setLastRunStats({ computed: computed.length, saved: 0, skippedIncomplete, skippedBudget, skippedLow });
+      setDiagnostics(computed.filter(c => !SAVEABLE_TIERS.includes(c.tier)));
 
       if (newMatches.length === 0) return;
 
@@ -1057,17 +1274,16 @@ export function LeadsMatchingPanel({
 
       {/* Tab content */}
 
-      {/* ── Matches tab ── */}
       {tab === 'matches' && (
         <div className="space-y-3">
-          {/* Tier filter */}
+          {/* Tier filter — real tiers only */}
           <div className="flex gap-1.5 flex-wrap">
-            {(['all', 'legendary', 'strong', 'warm', 'low', 'budget_mismatch', 'incomplete_data'] as (FilterTier | 'all')[]).map(t => {
+            {(['all', 'legendary', 'strong', 'warm'] as FilterTier[]).map(t => {
               const meta = t === 'all' ? null : MATCH_TIER_META[t as MatchTier];
               return (
                 <button
                   key={t}
-                  onClick={() => setFilterTier(t as FilterTier)}
+                  onClick={() => setFilterTier(t)}
                   className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all"
                   style={{
                     color: filterTier === t ? (meta?.color ?? '#f59e0b') : '#475569',
@@ -1083,28 +1299,80 @@ export function LeadsMatchingPanel({
 
           {loading ? (
             <div className="text-center py-12 text-slate-600 text-sm">Loading matches…</div>
-          ) : filteredMatches.length === 0 ? (
+          ) : filteredMatches.length === 0 && diagnostics.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Users className="w-12 h-12 text-slate-700 mx-auto" />
               <p className="text-slate-600 text-sm">No matches yet.</p>
               <p className="text-slate-700 text-xs leading-relaxed max-w-xs mx-auto">
-                Real matches require compatible asset types, overlapping locations (or investor has "Todas"), and budget compatibility. Complete your lead profiles and run the engine.
+                Run the engine to compute investor–owner pairs. Diagnostic signals will appear below to guide you.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredMatches.map((m, i) => (
-                <MatchCard
-                  key={m.id}
-                  match={m}
-                  investorLead={allLeadsById.get(m.investor_lead_id)}
-                  ownerLead={allLeadsById.get(m.owner_lead_id)}
-                  index={i}
-                  onDismiss={() => handleDismissMatch(m.id)}
-                  onAction={() => handleActionMatch(m.id)}
-                />
-              ))}
-            </div>
+            <>
+              {filteredMatches.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredMatches.map((m, i) => (
+                    <MatchCard
+                      key={m.id}
+                      match={m}
+                      investorLead={allLeadsById.get(m.investor_lead_id)}
+                      ownerLead={allLeadsById.get(m.owner_lead_id)}
+                      index={i}
+                      onDismiss={() => handleDismissMatch(m.id)}
+                      onAction={() => handleActionMatch(m.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-800/50 bg-slate-900/30 px-5 py-6 text-center space-y-1.5">
+                  <p className="text-slate-500 text-sm font-bold">No commercial matches yet</p>
+                  <p className="text-slate-700 text-xs leading-relaxed max-w-xs mx-auto">
+                    Warm, strong, and legendary matches require compatible asset types, overlapping locations, and budget alignment.
+                    Review the diagnostics below to improve your lead data.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Diagnostic sections ── */}
+              {diagnostics.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="flex-1 h-px bg-slate-800/60" />
+                    <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest">Diagnostic Signals</span>
+                    <div className="flex-1 h-px bg-slate-800/60" />
+                  </div>
+                  <p className="text-[10px] text-slate-700 text-center px-4">
+                    These pairs were computed but do not qualify as commercial matches.
+                    They are not saved — use them to identify data gaps.
+                  </p>
+
+                  <DiagnosticSection
+                    title="Weak Signals"
+                    description="· share a market segment but lack the overlap for a commercial match"
+                    accentColor="#3b82f6"
+                    items={diagnostics.filter(d => d.tier === 'low')}
+                  />
+                  <DiagnosticSection
+                    title="Budget Review"
+                    description="· asset value exceeds investor budget"
+                    accentColor="#f59e0b"
+                    items={diagnostics.filter(d => d.tier === 'budget_mismatch')}
+                  />
+                  <DiagnosticSection
+                    title="Incomplete Data"
+                    description="· missing required fields for scoring"
+                    accentColor="#475569"
+                    items={diagnostics.filter(d => d.tier === 'incomplete_data')}
+                  />
+                </div>
+              )}
+
+              {!lastRunStats && diagnostics.length === 0 && (
+                <p className="text-[10px] text-slate-700 text-center pt-1">
+                  Run the matching engine to see diagnostic signals.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
