@@ -677,6 +677,19 @@ function CinematicMatchNotification({
   );
 }
 
+// ─── Matching criteria ────────────────────────────────────────────────────────
+// Only these tiers represent real commercial opportunities and are persisted.
+// incomplete_data / budget_mismatch / low are diagnostics — computed but skipped.
+const SAVEABLE_TIERS: MatchTier[] = ['warm', 'strong', 'legendary'];
+
+interface RunStats {
+  computed: number;
+  saved: number;
+  skippedIncomplete: number;
+  skippedBudget: number;
+  skippedLow: number;
+}
+
 // ─── Main panel ───────────────────────────────────────────────────────────────
 
 type PanelTab = 'matches' | 'leads' | 'add';
@@ -706,6 +719,7 @@ export function LeadsMatchingPanel({
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [lastRunStats, setLastRunStats] = useState<RunStats | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [filterTipo, setFilterTipo] = useState<'all' | LeadTipo>('all');
@@ -802,24 +816,32 @@ export function LeadsMatchingPanel({
 
     try {
       const t0 = performance.now();
+      const activeLs  = leads.filter(l => l.status === 'active');
+      const investors  = activeLs.filter(l => l.tipo === 'Investidor');
+      const owners     = activeLs.filter(l => l.tipo === 'Proprietário');
+      const computed   = computeAllMatches(activeLs);
 
-      const activeLs = leads.filter(l => l.status === 'active');
-      const investors = activeLs.filter(l => l.tipo === 'Investidor');
-      const owners    = activeLs.filter(l => l.tipo === 'Proprietário');
-      const computed  = computeAllMatches(activeLs);
+      const skippedIncomplete = computed.filter(c => c.tier === 'incomplete_data').length;
+      const skippedBudget     = computed.filter(c => c.tier === 'budget_mismatch').length;
+      const skippedLow        = computed.filter(c => c.tier === 'low').length;
 
       const t1 = performance.now();
-      console.log(`[MatchEngine] ${investors.length} investors × ${owners.length} owners = ${computed.length} candidate pairs (${(t1 - t0).toFixed(1)}ms compute)`);
+      console.log(
+        `[MatchEngine] ${investors.length} inv × ${owners.length} own = ${computed.length} pairs (${(t1 - t0).toFixed(1)}ms) | saveable=${computed.length - skippedIncomplete - skippedBudget - skippedLow} skip: incomplete=${skippedIncomplete} budget=${skippedBudget} low=${skippedLow}`
+      );
 
-      // Get existing match pairs to avoid duplicates
       const existingPairs = new Set(matches.map(m => `${m.investor_lead_id}_${m.owner_lead_id}`));
-      const newMatches = computed.filter(c => !existingPairs.has(`${c.investor.id}_${c.owner.id}`));
 
-      console.log(`[MatchEngine] ${newMatches.length} new matches to save (${computed.length - newMatches.length} already exist)`);
+      // Persist only real commercial matches (warm / strong / legendary)
+      const newMatches = computed
+        .filter(c => SAVEABLE_TIERS.includes(c.tier))
+        .filter(c => !existingPairs.has(`${c.investor.id}_${c.owner.id}`));
+
+      // Always record run stats so the UI reports diagnostics even when nothing saves
+      setLastRunStats({ computed: computed.length, saved: 0, skippedIncomplete, skippedBudget, skippedLow });
 
       if (newMatches.length === 0) return;
 
-      // Process matches: award XP, generate quests for high-quality matches
       const saved: LeadMatch[] = [];
       let totalXP = 0;
 
@@ -828,7 +850,6 @@ export function LeadsMatchingPanel({
         let questGenerated = false;
         let districtId: string | null = null;
 
-        // Find matching district from lead locations
         if (m.tier === 'legendary' || m.tier === 'strong') {
           const allLocations = [...m.investor.locations, ...m.owner.locations];
           const matchedDistrict = districts.find(d =>
@@ -837,24 +858,16 @@ export function LeadsMatchingPanel({
               loc.toLowerCase().includes(d.name.toLowerCase())
             )
           );
-
           if (matchedDistrict) {
             districtId = matchedDistrict.id;
-            const domXP = m.tier === 'legendary' ? 150 : 75;
-            onDominanceGained(matchedDistrict.id, domXP);
+            onDominanceGained(matchedDistrict.id, m.tier === 'legendary' ? 150 : 75);
           }
-
           const matchQuests = generateMatchQuests({
-            playerId,
-            playerLevel,
-            investorName: m.investor.name,
-            ownerName:    m.owner.name,
-            tier:         m.tier,
-            districtId,
-            matchScore:   m.score,
+            playerId, playerLevel,
+            investorName: m.investor.name, ownerName: m.owner.name,
+            tier: m.tier, districtId, matchScore: m.score,
             opportunityType: m.opportunityType,
           });
-
           try {
             const inserted = await insertDynamicQuests(matchQuests);
             questGenerated = true;
@@ -864,7 +877,7 @@ export function LeadsMatchingPanel({
 
         const tSave0 = performance.now();
         const saved_match = await saveLeadMatch(playerId, m, xp, questGenerated, districtId);
-        console.log(`[MatchEngine] saved match ${m.investor.name} → ${m.owner.name} (${m.tier}) in ${(performance.now() - tSave0).toFixed(1)}ms`);
+        console.log(`[MatchEngine] saved ${m.investor.name} → ${m.owner.name} (${m.tier}) in ${(performance.now() - tSave0).toFixed(1)}ms`);
 
         saved.push({ ...saved_match, investor: m.investor, owner: m.owner });
         totalXP += xp;
@@ -876,6 +889,7 @@ export function LeadsMatchingPanel({
 
       if (totalXP > 0) onXPGained(totalXP);
       setMatches(prev => [...saved, ...prev]);
+      setLastRunStats(prev => prev ? { ...prev, saved: saved.length } : null);
 
       const tTotal = performance.now() - t0;
       console.log(`[MatchEngine] done — ${saved.length} saved, ${totalXP} XP, ${tTotal.toFixed(0)}ms total`);
@@ -899,9 +913,8 @@ export function LeadsMatchingPanel({
     filterTier === 'all' || m.match_tier === filterTier
   );
 
-  const legendaryCount      = matches.filter(m => m.match_tier === 'legendary').length;
-  const budgetMismatchCount = matches.filter(m => m.match_tier === 'budget_mismatch').length;
-  const incompleteCount     = matches.filter(m => m.match_tier === 'incomplete_data').length;
+  const legendaryCount = matches.filter(m => m.match_tier === 'legendary').length;
+  const savedCount     = matches.length; // only warm/strong/legendary reach the DB now
 
   const allLeadsById = new Map(leads.map(l => [l.id, l]));
 
@@ -977,10 +990,10 @@ export function LeadsMatchingPanel({
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-2 mt-4">
           {[
-            { label: 'Investors',  value: investors.length,                      color: '#3b82f6', icon: DollarSign },
-            { label: 'Owners',     value: owners.length,                         color: '#10b981', icon: Building2 },
-            { label: 'Legendary',  value: legendaryCount,                        color: '#f59e0b', icon: Crown },
-            { label: 'Issues',     value: budgetMismatchCount + incompleteCount, color: '#ef4444', icon: AlertTriangle },
+            { label: 'Investors',  value: investors.length, color: '#3b82f6', icon: DollarSign },
+            { label: 'Owners',     value: owners.length,    color: '#10b981', icon: Building2 },
+            { label: 'Legendary',  value: legendaryCount,   color: '#f59e0b', icon: Crown },
+            { label: 'Matched',    value: savedCount,        color: '#10b981', icon: Star },
           ].map(({ label, value, color, icon: Icon }) => (
             <div
               key={label}
@@ -994,14 +1007,25 @@ export function LeadsMatchingPanel({
           ))}
         </div>
 
-        {/* Debug counters */}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-mono text-slate-600 border-t border-slate-800/40 pt-2.5">
-          <span>global leads: <span className="text-amber-500">{externalLeads?.length ?? '—'}</span></span>
-          <span>local leads: <span className="text-slate-400">{localLeads.length}</span></span>
-          <span>active leads: <span className="text-emerald-500">{leads.length}</span></span>
-          <span>localStorage: <span className="text-cyan-500">{(() => { try { const k = Object.keys(localStorage).find(k => k.startsWith('swallow_leads_')); return k ? JSON.parse(localStorage.getItem(k)!).length : 0; } catch { return '?'; } })()}</span></span>
-          <span>source: <span style={{ color: (externalLeads && externalLeads.length > 0) ? '#10b981' : '#94a3b8' }}>{(externalLeads && externalLeads.length > 0) ? 'global' : 'supabase'}</span></span>
-        </div>
+        {/* Post-run diagnostic summary */}
+        {lastRunStats && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono border-t border-slate-800/40 pt-2.5">
+            <span className="font-black text-slate-500 uppercase tracking-widest">Last run</span>
+            <span className="text-slate-400">{lastRunStats.computed} pairs computed</span>
+            <span style={{ color: lastRunStats.saved > 0 ? '#10b981' : '#475569' }}>
+              {lastRunStats.saved} saved
+            </span>
+            {lastRunStats.skippedIncomplete > 0 && (
+              <span className="text-slate-600">{lastRunStats.skippedIncomplete} incomplete data</span>
+            )}
+            {lastRunStats.skippedBudget > 0 && (
+              <span className="text-slate-600">{lastRunStats.skippedBudget} budget exceeded</span>
+            )}
+            {lastRunStats.skippedLow > 0 && (
+              <span className="text-slate-600">{lastRunStats.skippedLow} weak signal</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -1063,7 +1087,9 @@ export function LeadsMatchingPanel({
             <div className="text-center py-12 space-y-3">
               <Users className="w-12 h-12 text-slate-700 mx-auto" />
               <p className="text-slate-600 text-sm">No matches yet.</p>
-              <p className="text-slate-700 text-xs">Add at least one investor and one owner, then run the Match Engine.</p>
+              <p className="text-slate-700 text-xs leading-relaxed max-w-xs mx-auto">
+                Real matches require compatible asset types, overlapping locations (or investor has "Todas"), and budget compatibility. Complete your lead profiles and run the engine.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
